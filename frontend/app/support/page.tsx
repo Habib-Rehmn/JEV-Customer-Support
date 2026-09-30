@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { ThemeToggle } from "@/components/app/theme-toggle";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +42,7 @@ export default function SupportPage() {
 
   return (
     <main className="mx-auto w-full max-w-xl flex-1 px-4 py-12">
+      <ThemeToggle className="fixed top-3 right-3" />
       <Link href="/" className="text-sm text-muted-foreground hover:underline">
         ← Jev Support
       </Link>

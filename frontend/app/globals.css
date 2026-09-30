@@ -93,7 +93,7 @@
 .dark {
   --viz-accent: #3987e5;
   --viz-muted: oklch(0.4 0 0);
-  --viz-track: oklch(0.22 0 0);
+  --viz-track: oklch(0.27 0 0);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { ThemeToggle } from "@/components/app/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,7 @@ export default function DashboardLayout({ children }: LayoutProps<"/dashboard">)
             <span className="hidden text-muted-foreground sm:inline">
               {user.name} · {user.role.toLowerCase()}
             </span>
+            <ThemeToggle />
             <Button variant="outline" size="sm" onClick={logout}>
               Log out
             </Button>

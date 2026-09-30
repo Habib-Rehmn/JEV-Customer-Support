@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ThemeToggle } from "@/components/app/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,7 @@ const STEPS = [
 export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-10 px-4 py-16">
+      <ThemeToggle className="fixed top-3 right-3" />
       <div className="space-y-4">
         <h1 className="text-4xl font-semibold tracking-tight">Jev Support</h1>
         <p className="text-lg text-muted-foreground">
