@@ -1,0 +1,47 @@
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+from app.models.enums import SupportAction, TicketPriority, TicketStatus
+from app.schemas.customer import CustomerRead
+from app.schemas.order import OrderRead
+
+
+class TicketCreate(BaseModel):
+    customer_name: str = Field(min_length=1, max_length=200)
+    email: EmailStr
+    order_number: str | None = Field(default=None, max_length=50)
+    subject: str = Field(min_length=1, max_length=300)
+    message: str = Field(min_length=1, max_length=10_000)
+
+
+class TicketUpdate(BaseModel):
+    status: TicketStatus | None = None
+    priority: TicketPriority | None = None
+    final_action: SupportAction | None = None
+
+
+class TicketRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    customer_id: int
+    order_id: int | None
+    subject: str
+    message: str
+    status: TicketStatus
+    priority: TicketPriority
+    final_action: SupportAction | None
+    created_at: datetime
+    updated_at: datetime
+    resolved_at: datetime | None
+
+
+class TicketDetail(TicketRead):
+    customer: CustomerRead
+    order: OrderRead | None
+
+
+class TicketList(BaseModel):
+    items: list[TicketRead]
+    total: int

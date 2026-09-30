@@ -16,6 +16,7 @@ services:
 
   backend:
     build: ./backend
+    user: "${UID:-1000}:${GID:-1000}"
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-jev}:${POSTGRES_PASSWORD:-jev}@postgres:5432/${POSTGRES_DB:-jev_support}

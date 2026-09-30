@@ -12,3 +12,9 @@ curl localhost:8000/health
 ```
 
 API docs: http://localhost:8000/docs
+
+## Tests
+
+```bash
+docker compose exec backend pytest
+```
