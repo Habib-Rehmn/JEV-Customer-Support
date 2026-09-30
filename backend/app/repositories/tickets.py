@@ -2,7 +2,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import AuditLog, Ticket
+from app.models import AuditLog, JevDecisionRecord, Ticket
 
 
 class TicketRepository:
@@ -10,8 +10,12 @@ class TicketRepository:
         self.session = session
 
     async def get(self, ticket_id: int, with_relations: bool = False) -> Ticket | None:
-        options = [selectinload(Ticket.customer), selectinload(Ticket.order)] if with_relations else []
-        return await self.session.get(Ticket, ticket_id, options=options)
+        options = (
+            [selectinload(Ticket.customer), selectinload(Ticket.order), selectinload(Ticket.jev_decisions)]
+            if with_relations
+            else []
+        )
+        return await self.session.get(Ticket, ticket_id, options=options, populate_existing=with_relations)
 
     async def list(
         self, *, status: str | None = None, customer_id: int | None = None, limit: int = 50, offset: int = 0
@@ -24,6 +28,11 @@ class TicketRepository:
         total = await self.session.scalar(select(func.count()).select_from(query.subquery()))
         result = await self.session.scalars(query.order_by(Ticket.id.desc()).limit(limit).offset(offset))
         return list(result), total or 0
+
+    async def add_decision(self, record: JevDecisionRecord) -> JevDecisionRecord:
+        self.session.add(record)
+        await self.session.flush()
+        return record
 
     async def add(self, ticket: Ticket) -> Ticket:
         self.session.add(ticket)

@@ -11,7 +11,7 @@ async def test_create_ticket_links_existing_customer_and_order(client, seeded):
     res = await client.post("/api/v1/tickets", json=TICKET)
     assert res.status_code == 201
     body = res.json()
-    assert body["status"] == "NEW"
+    assert body["status"] == "ANALYZING"
     assert body["customer_id"] == seeded["ali"]
     assert body["order_id"] is not None
 

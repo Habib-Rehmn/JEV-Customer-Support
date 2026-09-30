@@ -28,3 +28,10 @@ class Ticket(Base):
 
     customer: Mapped["Customer"] = relationship(back_populates="tickets")  # noqa: F821
     order: Mapped["Order | None"] = relationship()  # noqa: F821
+    jev_decisions: Mapped[list["JevDecisionRecord"]] = relationship(  # noqa: F821
+        order_by="JevDecisionRecord.id.desc()"
+    )
+
+    @property
+    def latest_jev_decision(self) -> "JevDecisionRecord | None":  # noqa: F821
+        return self.jev_decisions[0] if self.jev_decisions else None

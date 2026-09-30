@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.models.enums import SupportAction, TicketPriority, TicketStatus
 from app.schemas.customer import CustomerRead
+from app.schemas.jev import JevDecisionRead
 from app.schemas.order import OrderRead
 
 
@@ -40,6 +41,7 @@ class TicketRead(BaseModel):
 class TicketDetail(TicketRead):
     customer: CustomerRead
     order: OrderRead | None
+    latest_jev_decision: JevDecisionRead | None
 
 
 class TicketList(BaseModel):
