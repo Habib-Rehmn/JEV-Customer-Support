@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from sqlalchemy import false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -54,6 +56,12 @@ class TicketRepository:
         self.session.add(ticket)
         await self.session.flush()
         return ticket
+
+    async def list_events(self, ticket_id: int) -> list[AuditLog]:
+        result = await self.session.scalars(
+            select(AuditLog).where(AuditLog.ticket_id == ticket_id).order_by(AuditLog.id)
+        )
+        return list(result)
 
     async def log(self, ticket_id: int | None, event_type: str, **data) -> None:
         self.session.add(AuditLog(ticket_id=ticket_id, event_type=event_type, event_data=data))

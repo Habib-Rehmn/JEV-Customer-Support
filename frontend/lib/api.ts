@@ -5,6 +5,7 @@ import type {
   Ticket,
   TicketCreate,
   TicketDetail,
+  TicketEvent,
   TicketList,
   TicketStatus,
   TokenResponse,
@@ -96,6 +97,7 @@ export const api = {
     return request<TicketList>(`/tickets?${query}`);
   },
   getTicket: (id: number) => request<TicketDetail>(`/tickets/${id}`),
+  getTicketEvents: (id: number) => request<TicketEvent[]>(`/tickets/${id}/events`),
   analyze: (id: number) => post<Ticket>(`/tickets/${id}/analyze`),
   generateResponse: (id: number) => post<AIResponse>(`/tickets/${id}/generate-response`),
   editResponse: (id: number, final_text: string) =>

@@ -18,6 +18,7 @@ from app.schemas.ticket import (
     ResponseEdit,
     TicketCreate,
     TicketDetail,
+    TicketEvent,
     TicketList,
     TicketRead,
     TicketUpdate,
@@ -62,9 +63,14 @@ async def get_ticket(ticket_id: int, service: TicketServiceDep):
 
 
 @router.patch("/{ticket_id}", response_model=TicketRead)
-async def update_ticket(ticket_id: int, data: TicketUpdate, service: TicketServiceDep, _: AdminUser):
+async def update_ticket(ticket_id: int, data: TicketUpdate, service: TicketServiceDep, admin: AdminUser):
     """Raw field changes, for admins correcting data. Agents use the action endpoints."""
-    return await service.update(ticket_id, data)
+    return await service.update(ticket_id, data, user_id=admin.id)
+
+
+@router.get("/{ticket_id}/events", response_model=list[TicketEvent])
+async def ticket_events(ticket_id: int, service: TicketServiceDep):
+    return await service.events(ticket_id)
 
 
 @router.post("/{ticket_id}/analyze", response_model=TicketRead, status_code=status.HTTP_202_ACCEPTED)
@@ -82,13 +88,15 @@ async def analyze_ticket(
 
 
 @router.post("/{ticket_id}/generate-response", response_model=AIResponseRead, status_code=status.HTTP_201_CREATED)
-async def generate_response(ticket_id: int, service: TicketServiceDep, openai: OpenAIServiceDep):
-    return await service.generate_response(ticket_id, openai)
+async def generate_response(
+    ticket_id: int, service: TicketServiceDep, openai: OpenAIServiceDep, user: CurrentUser
+):
+    return await service.generate_response(ticket_id, openai, user_id=user.id)
 
 
 @router.put("/{ticket_id}/response", response_model=AIResponseRead)
-async def edit_response(ticket_id: int, data: ResponseEdit, service: TicketServiceDep):
-    return await service.edit_response(ticket_id, data.final_text)
+async def edit_response(ticket_id: int, data: ResponseEdit, service: TicketServiceDep, user: CurrentUser):
+    return await service.edit_response(ticket_id, data.final_text, user_id=user.id)
 
 
 @router.post("/{ticket_id}/approve", response_model=TicketRead)

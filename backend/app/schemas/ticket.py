@@ -73,3 +73,11 @@ class EscalateRequest(BaseModel):
 class ResolveRequest(BaseModel):
     final_action: SupportAction
     note: str | None = Field(default=None, max_length=1_000)
+
+
+class TicketEvent(BaseModel):
+    id: int
+    event_type: str
+    data: dict
+    actor: str | None = Field(description="Name of the user who acted, if any")
+    created_at: datetime

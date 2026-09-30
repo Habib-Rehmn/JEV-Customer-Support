@@ -18,6 +18,12 @@ class UserRepository:
     async def list(self) -> list[User]:
         return list(await self.session.scalars(select(User).order_by(User.id)))
 
+    async def names(self, user_ids: set[int]) -> dict[int, str]:
+        if not user_ids:
+            return {}
+        rows = await self.session.execute(select(User.id, User.name).where(User.id.in_(user_ids)))
+        return {user_id: name for user_id, name in rows}
+
     async def count_admins(self) -> int:
         return await self.session.scalar(select(func.count()).where(User.role == UserRole.ADMIN)) or 0
 

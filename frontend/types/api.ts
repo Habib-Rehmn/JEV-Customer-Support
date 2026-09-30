@@ -124,6 +124,14 @@ export interface TicketDetail extends Ticket {
   latest_ai_response: AIResponse | null;
 }
 
+export interface TicketEvent {
+  id: number;
+  event_type: string;
+  data: Record<string, unknown>;
+  actor: string | null;
+  created_at: string;
+}
+
 export interface AnalyticsOverview {
   since_days: number | null;
   tickets: {

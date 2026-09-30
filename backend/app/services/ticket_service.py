@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.logging import get_logger
@@ -7,6 +9,7 @@ from app.models.enums import SupportAction, TicketPriority, TicketStatus
 from app.repositories.customers import CustomerRepository
 from app.repositories.orders import OrderRepository
 from app.repositories.tickets import TicketRepository
+from app.repositories.users import UserRepository
 from app.schemas.jev import JevDecision
 from app.schemas.ticket import TicketCreate, TicketUpdate
 from app.services.context_builder import ContextBuilder
@@ -94,14 +97,16 @@ class TicketService:
     async def list(self, **filters) -> tuple[list[Ticket], int]:
         return await self.tickets.list(**filters)
 
-    async def update(self, ticket_id: int, data: TicketUpdate) -> Ticket:
+    async def update(self, ticket_id: int, data: TicketUpdate, user_id: int | None = None) -> Ticket:
         ticket = await self.get(ticket_id)
         changes = data.model_dump(exclude_unset=True, exclude_none=True)
         for field, value in changes.items():
             setattr(ticket, field, value)
         if changes.get("status") == TicketStatus.RESOLVED:
             ticket.resolved_at = utcnow()
-        await self.tickets.log(ticket.id, "ticket_updated", **{k: str(v) for k, v in changes.items()})
+        await self.tickets.log(
+            ticket.id, "ticket_updated", user_id=user_id, changes={k: str(v) for k, v in changes.items()}
+        )
         await self.session.commit()
         await self.session.refresh(ticket)
         return ticket
@@ -153,7 +158,7 @@ class TicketService:
         )
         return True
 
-    async def generate_response(self, ticket_id: int, openai: OpenAIService) -> AIResponse:
+    async def generate_response(self, ticket_id: int, openai: OpenAIService, user_id: int | None = None) -> AIResponse:
         """Draft a reply for the permitted action. On failure the decision stays and the agent writes manually."""
         ticket = await self.get(ticket_id)
         decision = ticket.latest_jev_decision
@@ -161,7 +166,7 @@ class TicketService:
             raise NoDecisionYet("Ticket has no permitted action yet; analyze it first")
         action = SupportAction(decision.permitted_action)
 
-        await self.tickets.log(ticket.id, "openai_generation_started", action=action)
+        await self.tickets.log(ticket.id, "openai_generation_started", action=action, user_id=user_id)
         try:
             reply = await openai.generate_reply(
                 customer_name=ticket.customer.name,
@@ -187,6 +192,23 @@ class TicketService:
         return response
 
 
+    async def events(self, ticket_id: int) -> list[dict]:
+        """The ticket's audit trail, oldest first, with the acting user's name attached."""
+        await self.get(ticket_id)  # 404 if missing
+        events = await self.tickets.list_events(ticket_id)
+        user_ids = {e.event_data.get("user_id") for e in events if e.event_data.get("user_id")}
+        names = await UserRepository(self.session).names(user_ids)
+        return [
+            {
+                "id": e.id,
+                "event_type": e.event_type,
+                "data": e.event_data,
+                "actor": names.get(e.event_data.get("user_id")),
+                "created_at": e.created_at,
+            }
+            for e in events
+        ]
+
     # --- Agent actions -------------------------------------------------------------------------
 
     async def _get_open(self, ticket_id: int) -> Ticket:
@@ -195,14 +217,16 @@ class TicketService:
             raise TicketConflict(f"Ticket in status {ticket.status} cannot be changed")
         return ticket
 
-    async def edit_response(self, ticket_id: int, final_text: str) -> AIResponse:
+    async def edit_response(self, ticket_id: int, final_text: str, user_id: int | None = None) -> AIResponse:
         """Save the agent's edited reply. Creates a manual draft if OpenAI never produced one."""
         ticket = await self._get_open(ticket_id)
         response = ticket.latest_ai_response
         if response is None or response.approved:
             response = await self.tickets.add_response(AIResponse(ticket_id=ticket.id, model=None))
         response.final_text = final_text
-        await self.tickets.log(ticket.id, "response_edited", response_id=response.id, manual=response.model is None)
+        await self.tickets.log(
+            ticket.id, "response_edited", response_id=response.id, manual=response.model is None, user_id=user_id
+        )
         await self.session.commit()
         return response
 
@@ -225,7 +249,7 @@ class TicketService:
 
         response = ticket.latest_ai_response
         if final_text is not None:
-            response = await self.edit_response(ticket_id, final_text)
+            response = await self.edit_response(ticket_id, final_text, user_id)
         if response is None or not (response.final_text or "").strip():
             raise TicketConflict("There is no reply to send; write or generate one first")
 

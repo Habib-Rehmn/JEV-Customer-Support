@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import { ActivityTimeline } from "@/components/app/activity-timeline";
 import { ActionBadge, PriorityBadge, StatusBadge } from "@/components/app/badges";
 import { JevDecisionCard } from "@/components/app/jev-decision-card";
 import { ReplyPanel } from "@/components/app/reply-panel";
@@ -22,7 +23,12 @@ const EXTRA_POLLS_FOR_REPLY = 8;
 export default function TicketPage() {
   const { id } = useParams<{ id: string }>();
   const ticketId = Number(id);
-  const { data: ticket, error, reload } = useApi(() => api.getTicket(ticketId), `ticket:${ticketId}`);
+  const { data: ticket, error, reload: reloadTicket } = useApi(() => api.getTicket(ticketId), `ticket:${ticketId}`);
+  const { data: events, reload: reloadEvents } = useApi(() => api.getTicketEvents(ticketId), `events:${ticketId}`);
+  const reload = useCallback(() => {
+    reloadTicket();
+    reloadEvents();
+  }, [reloadTicket, reloadEvents]);
   const [retrying, setRetrying] = useState(false);
   const extraPolls = useRef(0);
 
@@ -120,6 +126,8 @@ export default function TicketPage() {
               </Alert>
             </>
           )}
+
+          {events && <ActivityTimeline events={events} />}
         </div>
 
         <div className="space-y-6">
