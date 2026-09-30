@@ -24,6 +24,7 @@ class JevDecisionRecord(Base):
     # Extra yes/no signals asked in the same Jev request.
     billing_dispute_probability: Mapped[float | None] = mapped_column(Float)
     item_damaged_probability: Mapped[float | None] = mapped_column(Float)
+    urgency_score: Mapped[float | None] = mapped_column(Float)  # 0 (low) .. 3 (urgent)
 
     raw_response: Mapped[dict] = mapped_column(JSON)
 

@@ -13,6 +13,7 @@ class JevDecision(BaseModel):
     probabilities: dict[SupportAction, float]
     billing_dispute: float | None = None
     item_damaged: float | None = None
+    urgency: float | None = None  # 0 (low) .. 3 (urgent)
     raw_response: dict
 
 
@@ -29,6 +30,7 @@ class JevDecisionRead(BaseModel):
     human_escalation_probability: float
     billing_dispute_probability: float | None
     item_damaged_probability: float | None
+    urgency_score: float | None
     permitted_action: SupportAction | None
     requires_approval: bool | None
     rule_hits: list[dict] | None

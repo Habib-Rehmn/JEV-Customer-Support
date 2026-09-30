@@ -7,6 +7,7 @@ class TicketCounts(BaseModel):
     escalated: int = Field(description="Currently ESCALATED")
     resolved: int = Field(description="RESOLVED or CLOSED")
     jev_failed: int
+    overdue: int = Field(description="Awaiting a reply past their priority's response-time target")
     analyzed: int = Field(description="Has a Jev decision")
     auto_routed: int = Field(description="Analyzed and not escalated by the rules")
 

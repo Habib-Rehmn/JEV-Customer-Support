@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { ActionBadge, PriorityBadge, StatusBadge } from "@/components/app/badges";
+import { ActionBadge, DueBadge, PriorityBadge, StatusBadge } from "@/components/app/badges";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { timeAgo } from "@/lib/format";
 import type { TicketListItem } from "@/types/api";
@@ -23,6 +23,7 @@ export function TicketsTable({ tickets }: { tickets: TicketListItem[] }) {
           <TableHead>Subject</TableHead>
           <TableHead>Action</TableHead>
           <TableHead>Status</TableHead>
+          <TableHead>Reply due</TableHead>
           <TableHead className="text-right">Created</TableHead>
         </TableRow>
       </TableHeader>
@@ -51,6 +52,9 @@ export function TicketsTable({ tickets }: { tickets: TicketListItem[] }) {
                 <StatusBadge status={ticket.status} />
                 <PriorityBadge priority={ticket.priority} />
               </div>
+            </TableCell>
+            <TableCell>
+              <DueBadge dueAt={ticket.response_due_at} overdue={ticket.overdue} />
             </TableCell>
             <TableCell className="text-right text-muted-foreground">{timeAgo(ticket.created_at)}</TableCell>
           </TableRow>

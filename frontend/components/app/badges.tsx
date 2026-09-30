@@ -1,5 +1,8 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
-import { ACTION_LABELS, STATUS_LABELS } from "@/lib/format";
+import { ACTION_LABELS, STATUS_LABELS, duration } from "@/lib/format";
+import { useNow } from "@/lib/use-now";
 import { cn } from "@/lib/utils";
 import type { SupportAction, TicketPriority, TicketStatus } from "@/types/api";
 
@@ -28,6 +31,26 @@ export function ActionBadge({ action }: { action: SupportAction | null }) {
 }
 
 export function PriorityBadge({ priority }: { priority: TicketPriority }) {
-  if (priority === "NORMAL" || priority === "LOW") return null;
+  if (priority === "NORMAL") return null;
+  if (priority === "LOW") return <Badge variant="outline" className="text-muted-foreground">Low</Badge>;
   return <Badge variant="destructive">{priority === "URGENT" ? "Urgent" : "High priority"}</Badge>;
+}
+
+/** Time left until a reply is due, or how long it is overdue. */
+export function DueBadge({ dueAt, overdue }: { dueAt: string | null; overdue: boolean }) {
+  const now = useNow();
+  if (!dueAt) return <span className="text-muted-foreground">–</span>;
+  const left = new Date(dueAt).getTime() - now;
+  if (overdue || left <= 0) {
+    return (
+      <Badge variant="destructive" title={`Reply was due ${new Date(dueAt).toLocaleString()}`}>
+        Overdue {duration(left)}
+      </Badge>
+    );
+  }
+  return (
+    <span className="text-muted-foreground tabular-nums" title={`Reply due ${new Date(dueAt).toLocaleString()}`}>
+      in {duration(left)}
+    </span>
+  );
 }

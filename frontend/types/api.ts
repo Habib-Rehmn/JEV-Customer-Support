@@ -56,6 +56,9 @@ export interface Ticket {
   created_at: string;
   updated_at: string;
   resolved_at: string | null;
+  /** When a reply is due by the priority's response-time target; null once replied/closed. */
+  response_due_at: string | null;
+  overdue: boolean;
 }
 
 export interface TicketListItem extends Ticket {
@@ -100,6 +103,8 @@ export interface JevDecision {
   human_escalation_probability: number;
   billing_dispute_probability: number | null;
   item_damaged_probability: number | null;
+  /** 0 (low) .. 3 (urgent) */
+  urgency_score: number | null;
   permitted_action: SupportAction | null;
   requires_approval: boolean | null;
   rule_hits: RuleHit[] | null;
@@ -140,6 +145,7 @@ export interface AnalyticsOverview {
     escalated: number;
     resolved: number;
     jev_failed: number;
+    overdue: number;
     analyzed: number;
     auto_routed: number;
   };

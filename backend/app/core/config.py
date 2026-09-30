@@ -27,5 +27,11 @@ class Settings(BaseSettings):
     rule_auto_replacement_limit: float = 100.0
     rule_signal_threshold: float = 0.5
 
+    # Response-time targets (hours from ticket creation to the first reply), by priority
+    sla_hours_urgent: float = 1
+    sla_hours_high: float = 4
+    sla_hours_normal: float = 24
+    sla_hours_low: float = 72
+
 
 settings = Settings()

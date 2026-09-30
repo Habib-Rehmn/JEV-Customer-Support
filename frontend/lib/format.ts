@@ -49,3 +49,14 @@ export function timeAgo(value: string): string {
 export function ruleLabel(rule: string): string {
   return rule.replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
 }
+
+/** Compact duration, e.g. "45m", "3h", "2d". */
+export function duration(ms: number): string {
+  const minutes = Math.max(1, Math.round(Math.abs(ms) / 60000));
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) return `${hours}h`;
+  return `${Math.round(hours / 24)}d`;
+}
+
+export const URGENCY_LABELS = ["Low", "Normal", "High", "Urgent"];

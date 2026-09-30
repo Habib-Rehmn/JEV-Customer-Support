@@ -1,10 +1,43 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.config import settings
 from app.db.base import Base, utcnow
 from app.models.enums import TicketPriority, TicketStatus
+
+
+# Statuses where the customer is waiting on us (the response-time clock is running).
+AWAITING_REPLY = {
+    TicketStatus.NEW,
+    TicketStatus.ANALYZING,
+    TicketStatus.JEV_FAILED,
+    TicketStatus.WAITING_FOR_AGENT,
+    TicketStatus.ESCALATED,
+}
+
+
+def sla_hours(priority: str) -> float:
+    return {
+        TicketPriority.URGENT: settings.sla_hours_urgent,
+        TicketPriority.HIGH: settings.sla_hours_high,
+        TicketPriority.NORMAL: settings.sla_hours_normal,
+        TicketPriority.LOW: settings.sla_hours_low,
+    }[TicketPriority(priority)]
+
+
+def response_due_at(status: str, priority: str, created_at: datetime) -> datetime | None:
+    """When a reply is due by the priority's target; None once we're no longer the ones owing a reply."""
+    if status not in AWAITING_REPLY:
+        return None
+    created = created_at if created_at.tzinfo else created_at.replace(tzinfo=timezone.utc)
+    return created + timedelta(hours=sla_hours(priority))
+
+
+def is_overdue(status: str, priority: str, created_at: datetime) -> bool:
+    due = response_due_at(status, priority, created_at)
+    return due is not None and utcnow() > due
 
 
 class Ticket(Base):
@@ -39,6 +72,14 @@ class Ticket(Base):
     @property
     def latest_ai_response(self) -> "AIResponse | None":  # noqa: F821
         return self.ai_responses[0] if self.ai_responses else None
+
+    @property
+    def response_due_at(self) -> datetime | None:
+        return response_due_at(self.status, self.priority, self.created_at)
+
+    @property
+    def overdue(self) -> bool:
+        return is_overdue(self.status, self.priority, self.created_at)
 
     @property
     def current_action(self) -> str | None:

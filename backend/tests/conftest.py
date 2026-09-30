@@ -40,15 +40,24 @@ class FakeJev:
         return parse_response(self.response)
 
 
-def jev_response(action: str, confidence: float = 1.0, billing_dispute: float = 0.0, item_damaged: float = 0.0) -> dict:
+def jev_response(
+    action: str,
+    confidence: float = 1.0,
+    billing_dispute: float = 0.0,
+    item_damaged: float = 0.0,
+    urgency: float | None = 1.0,
+) -> dict:
     """A BeatAPI-shaped response with all probability on `action`."""
     probabilities = {a: 0.0 for a in ["refund", "replacement", "technical_support", "billing", "human_escalation"]}
     probabilities[action] = 1.0
-    return {"answers": {
+    answers = {
         "support_action": {"type": "choice", "choice": action, "confidence": confidence, "probabilities": probabilities},
         "billing_dispute": {"type": "noul", "noul": billing_dispute},
         "item_damaged": {"type": "noul", "noul": item_damaged},
-    }}
+    }
+    if urgency is not None:
+        answers["urgency"] = {"type": "score", "score": urgency, "confidence": 1}
+    return {"answers": answers}
 
 
 @pytest.fixture

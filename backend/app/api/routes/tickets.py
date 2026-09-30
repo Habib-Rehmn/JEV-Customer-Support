@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
 
 from app.api.deps import (
@@ -50,10 +52,11 @@ async def list_tickets(
     service: TicketServiceDep,
     status: TicketStatus | None = None,
     q: str | None = Query(None, max_length=200, description="Search ticket #, subject, message, customer, order"),
+    sort: Literal["newest", "urgent"] = Query("newest", description="urgent = priority, then longest waiting"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ):
-    items, total = await service.list(status=status, q=q, limit=limit, offset=offset)
+    items, total = await service.list(status=status, q=q, sort=sort, limit=limit, offset=offset)
     return TicketList(items=items, total=total)
 
 

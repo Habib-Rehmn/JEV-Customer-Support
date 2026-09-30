@@ -2,7 +2,7 @@ import { BarList } from "@/components/app/bar-list";
 import { ActionBadge } from "@/components/app/badges";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ACTION_LABELS, percent, ruleLabel } from "@/lib/format";
+import { ACTION_LABELS, URGENCY_LABELS, percent, ruleLabel } from "@/lib/format";
 import { SUPPORT_ACTIONS, type JevDecision } from "@/types/api";
 
 export function JevDecisionCard({ decision }: { decision: JevDecision }) {
@@ -49,6 +49,15 @@ export function JevDecisionCard({ decision }: { decision: JevDecision }) {
               {overruled && <span className="text-xs text-muted-foreground">overruled by rules</span>}
             </dd>
           </div>
+          <div className="space-y-1">
+            <dt className="text-muted-foreground">Urgency</dt>
+            <dd className="tabular-nums">
+              {decision.urgency_score === null
+                ? "–"
+                : `${URGENCY_LABELS[Math.round(decision.urgency_score)]} (${decision.urgency_score.toFixed(1)} / 3)`}
+            </dd>
+          </div>
+          <Signal label="Jev confidence" value={decision.confidence} />
           <Signal label="Billing dispute signal" value={decision.billing_dispute_probability} />
           <Signal label="Item damaged signal" value={decision.item_damaged_probability} />
         </dl>

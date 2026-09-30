@@ -1,10 +1,25 @@
 from __future__ import annotations
 
-from sqlalchemy import false, func, or_, select
+from sqlalchemy import case, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import AIResponse, AuditLog, Customer, JevDecisionRecord, Order, Ticket
+from app.models.enums import TicketPriority
+from app.models.ticket import AWAITING_REPLY
+
+
+_PRIORITY_RANK = case(
+    {TicketPriority.URGENT: 0, TicketPriority.HIGH: 1, TicketPriority.NORMAL: 2, TicketPriority.LOW: 3},
+    value=Ticket.priority,
+    else_=4,
+)
+_AWAITING_FIRST = case((Ticket.status.in_(AWAITING_REPLY), 0), else_=1)
+_ORDER = {
+    "newest": (Ticket.id.desc(),),
+    # Work queue: tickets still owed a reply, most urgent first, then whoever has waited longest.
+    "urgent": (_AWAITING_FIRST, _PRIORITY_RANK, Ticket.created_at, Ticket.id),
+}
 
 
 class TicketRepository:
@@ -26,6 +41,7 @@ class TicketRepository:
         status: str | None = None,
         customer_id: int | None = None,
         q: str | None = None,
+        sort: str = "newest",
         limit: int = 50,
         offset: int = 0,
     ) -> tuple[list[Ticket], int]:
@@ -38,7 +54,7 @@ class TicketRepository:
             query = query.where(Ticket.customer_id == customer_id)
         total = await self.session.scalar(select(func.count()).select_from(query.subquery()))
         result = await self.session.scalars(
-            query.options(selectinload(Ticket.jev_decisions)).order_by(Ticket.id.desc()).limit(limit).offset(offset)
+            query.options(selectinload(Ticket.jev_decisions)).order_by(*_ORDER[sort]).limit(limit).offset(offset)
         )
         return list(result), total or 0
 

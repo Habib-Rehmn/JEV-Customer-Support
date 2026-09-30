@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ActivityTimeline } from "@/components/app/activity-timeline";
-import { ActionBadge, PriorityBadge, StatusBadge } from "@/components/app/badges";
+import { ActionBadge, DueBadge, PriorityBadge, StatusBadge } from "@/components/app/badges";
 import { JevDecisionCard } from "@/components/app/jev-decision-card";
 import { ReplyPanel } from "@/components/app/reply-panel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -78,7 +78,14 @@ export default function TicketPage() {
           <StatusBadge status={ticket.status} />
           <PriorityBadge priority={ticket.priority} />
         </div>
-        <p className="text-sm text-muted-foreground">Received {dateTime(ticket.created_at)}</p>
+        <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          Received {dateTime(ticket.created_at)}
+          {ticket.response_due_at && (
+            <>
+              <span aria-hidden>·</span> Reply due <DueBadge dueAt={ticket.response_due_at} overdue={ticket.overdue} />
+            </>
+          )}
+        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

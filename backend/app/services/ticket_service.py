@@ -140,7 +140,8 @@ class TicketService:
             return False
 
         await self.tickets.log(
-            ticket.id, "jev_request_completed", action=decision.action, confidence=decision.confidence
+            ticket.id, "jev_request_completed",
+            action=decision.action, confidence=decision.confidence, urgency=decision.urgency,
         )
 
         outcome = evaluate(decision, context)
@@ -148,8 +149,8 @@ class TicketService:
         for hit in outcome.hits:
             await self.tickets.log(ticket.id, "rule_triggered", **hit)
         ticket.status = outcome.status
+        ticket.priority = priority_for(decision.urgency, escalated=outcome.escalated)
         if outcome.escalated:
-            ticket.priority = TicketPriority.HIGH
             await self.tickets.log(ticket.id, "ticket_escalated", by="rules")
         await self.session.commit()
         logger.info(
@@ -301,6 +302,17 @@ class TicketService:
         return ticket
 
 
+PRIORITY_BY_URGENCY = [TicketPriority.LOW, TicketPriority.NORMAL, TicketPriority.HIGH, TicketPriority.URGENT]
+
+
+def priority_for(urgency: float | None, *, escalated: bool) -> TicketPriority:
+    """Jev's urgency score (0-3) picks the priority; escalated tickets are always at least HIGH."""
+    priority = TicketPriority.NORMAL if urgency is None else PRIORITY_BY_URGENCY[round(urgency)]
+    if escalated and PRIORITY_BY_URGENCY.index(priority) < PRIORITY_BY_URGENCY.index(TicketPriority.HIGH):
+        return TicketPriority.HIGH
+    return priority
+
+
 def _decision_record(ticket_id: int, decision: JevDecision, outcome: RuleOutcome) -> JevDecisionRecord:
     p = decision.probabilities
     return JevDecisionRecord(
@@ -314,6 +326,7 @@ def _decision_record(ticket_id: int, decision: JevDecision, outcome: RuleOutcome
         human_escalation_probability=p[SupportAction.HUMAN_ESCALATION],
         billing_dispute_probability=decision.billing_dispute,
         item_damaged_probability=decision.item_damaged,
+        urgency_score=decision.urgency,
         raw_response=decision.raw_response,
         permitted_action=outcome.permitted_action,
         requires_approval=outcome.requires_approval,

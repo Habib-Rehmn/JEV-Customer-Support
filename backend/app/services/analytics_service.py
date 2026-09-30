@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.base import utcnow
 from app.models import AIResponse, AuditLog, JevDecisionRecord, Ticket
 from app.models.enums import SupportAction, TicketStatus
+from app.models.ticket import is_overdue
 from app.schemas.analytics import AnalyticsOverview, TicketCounts
 
 CLOSED_STATUSES = {TicketStatus.RESOLVED, TicketStatus.CLOSED}
@@ -25,7 +26,10 @@ class AnalyticsService:
         latest_decision_ids = select(func.max(JevDecisionRecord.id)).group_by(JevDecisionRecord.ticket_id)
         D = JevDecisionRecord
         rows = (await self.session.execute(
-            select(Ticket.status, Ticket.final_action, D.selected_action, D.permitted_action, D.confidence)
+            select(
+                Ticket.status, Ticket.priority, Ticket.created_at,
+                Ticket.final_action, D.selected_action, D.permitted_action, D.confidence,
+            )
             .outerjoin(D, and_(D.ticket_id == Ticket.id, D.id.in_(latest_decision_ids)))
             .where(ticket_filter)
         )).all()
@@ -58,6 +62,7 @@ class AnalyticsService:
                 escalated=sum(r.status == TicketStatus.ESCALATED for r in rows),
                 resolved=sum(r.status in CLOSED_STATUSES for r in rows),
                 jev_failed=sum(r.status == TicketStatus.JEV_FAILED for r in rows),
+                overdue=sum(is_overdue(r.status, r.priority, r.created_at) for r in rows),
                 analyzed=len(decided),
                 auto_routed=sum(r.permitted_action != SupportAction.HUMAN_ESCALATION for r in decided),
             ),

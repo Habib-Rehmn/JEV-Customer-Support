@@ -52,7 +52,8 @@ async def test_overview_metrics(client, seeded, fake_jev):
 
     body = await overview(client)
     assert body["tickets"] == {
-        "total": 5, "open": 3, "escalated": 1, "resolved": 2, "jev_failed": 1, "analyzed": 4, "auto_routed": 3,
+        "total": 5, "open": 3, "escalated": 1, "resolved": 2, "jev_failed": 1, "overdue": 0,
+        "analyzed": 4, "auto_routed": 3,
     }
     assert body["escalation_rate"] == 0.4                   # B (rules) + E (agent) of 5
     assert body["average_jev_confidence"] == 0.95           # (1 + 1 + 0.8 + 1) / 4

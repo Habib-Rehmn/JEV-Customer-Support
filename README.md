@@ -10,7 +10,7 @@ Jev decides · rules permit · OpenAI writes · agents approve
 ![Next.js 16](https://img.shields.io/badge/Next.js_16-000000?logo=nextdotjs&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL_16-4169E1?logo=postgresql&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker_Compose-2496ED?logo=docker&logoColor=white)
-![Tests](https://img.shields.io/badge/backend_tests-143_passing-2ea44f)
+![Tests](https://img.shields.io/badge/backend_tests-169_passing-2ea44f)
 
 ![Support dashboard](docs/screenshots/dashboard-light.png)
 
@@ -47,7 +47,8 @@ Each layer has one job, and each can fail without losing the ticket:
 ## Features
 
 - **Customer support form.** Public, no account needed.
-- **Automatic triage.** Every new ticket is classified in the background. Jev also answers two yes/no questions in the same call: *is this a billing dispute?* and *did the item arrive damaged?*
+- **Automatic triage.** Every new ticket is classified in the background. In the same call, Jev also answers two yes/no questions (*is this a billing dispute?* and *did the item arrive damaged?*) and scores **urgency** from Low to Urgent.
+- **Priority queue with reply targets.** Urgency sets the ticket's priority, and each priority has a response-time target (Urgent 1h, High 4h, Normal 24h, Low 72h). Overdue tickets are flagged, and the queue sorts the most urgent and longest-waiting tickets first.
 - **Business rules engine.** Rules can escalate, require approval, or pre-approve ([see below](#business-rules)). Thresholds are configurable from `.env`.
 - **Grounded AI replies.** OpenAI only sees the permitted action and its policy text. The customer's message is fenced off and treated as data, not instructions.
 - **Agent workspace:**
@@ -58,7 +59,7 @@ Each layer has one job, and each can fail without losing the ticket:
 - **Search** by `#number`, subject, message, customer or order number.
 - **Roles.** Agents answer tickets. Admins also manage users.
 - **Dark mode.** Follows the OS setting by default, with no flash on load.
-- **Audit log.** Every step is recorded: created, analyzed, rule triggered, drafted, approved, escalated, resolved.
+- **Activity timeline.** Every step is recorded and shown on the ticket, including exactly what Jev was given and who approved what.
 
 <details>
 <summary><b>More screenshots</b></summary>
@@ -134,6 +135,7 @@ All settings come from `.env` (see [`.env.example`](.env.example)).
 | `JWT_SECRET` | `change-me` | Signs login tokens. **Always set a random value** |
 | `POSTGRES_USER` / `_PASSWORD` / `_DB` | `jev` / `jev` / `jev_support` | Database credentials |
 | `RULE_*` | see above | Business rule thresholds |
+| `SLA_HOURS_URGENT` / `_HIGH` / `_NORMAL` / `_LOW` | `1` / `4` / `24` / `72` | Response-time target per priority |
 
 > [!NOTE]
 > On the free Jev tier, an account that has never been topped up gets **one successful request per minute**. Analysis calls are made one at a time and wait for `Retry-After` on HTTP 429, so tickets queue up rather than fail.
@@ -167,7 +169,8 @@ Everything is under `/api/v1`. Customers can create tickets without logging in. 
 | Method | Path | Who | Purpose |
 |---|---|---|---|
 | `POST` | `/tickets` | public | Submit a ticket (analysis starts automatically) |
-| `GET` | `/tickets?status=&q=&limit=&offset=` | agent | List, filter and search |
+| `GET` | `/tickets?status=&q=&sort=&limit=&offset=` | agent | List, filter, search; `sort=urgent` for the work queue |
+| `GET` | `/tickets/{id}/events` | agent | Activity timeline |
 | `GET` | `/tickets/{id}` | agent | Detail with latest Jev decision and reply |
 | `POST` | `/tickets/{id}/analyze` | agent | Re-run Jev + rules |
 | `POST` | `/tickets/{id}/generate-response` | agent | New OpenAI draft |
@@ -196,7 +199,7 @@ Everything is under `/api/v1`. Customers can create tickets without logging in. 
 │   │   └── schemas/          Pydantic request/response models
 │   ├── alembic/versions/     migrations
 │   ├── scripts/              seed.py, create_user.py
-│   └── tests/                143 tests: fakes for Jev/OpenAI, recorded real BeatAPI fixture
+│   └── tests/                169 tests: fakes for Jev/OpenAI, recorded real BeatAPI fixture
 ├── frontend/                 Next.js 16 · TypeScript · Tailwind v4 · shadcn/ui
 │   ├── app/                  /, /support, /login, /dashboard/{,tickets,tickets/[id],users}
 │   ├── components/app/       ticket table, Jev decision card, reply panel, charts

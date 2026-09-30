@@ -59,7 +59,11 @@ export default function DashboardPage() {
       ) : (
         <>
           <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Ticket counts">
-            <StatTile label="Open" value={stats.tickets.open} hint={`${stats.tickets.total} total`} />
+            <StatTile
+              label="Open"
+              value={stats.tickets.open}
+              hint={`${stats.tickets.total} total${stats.tickets.overdue ? ` · ${stats.tickets.overdue} overdue` : ""}`}
+            />
             <StatTile
               label="Escalated"
               value={stats.tickets.escalated}

@@ -91,7 +91,9 @@ export const api = {
     request<User>(`/users/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
   createTicket: (data: TicketCreate) => post<Ticket>("/tickets", data),
-  listTickets: (params: { status?: TicketStatus; q?: string; limit?: number; offset?: number } = {}) => {
+  listTickets: (
+    params: { status?: TicketStatus; q?: string; sort?: "newest" | "urgent"; limit?: number; offset?: number } = {},
+  ) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) if (value !== undefined && value !== "") query.set(key, String(value));
     return request<TicketList>(`/tickets?${query}`);

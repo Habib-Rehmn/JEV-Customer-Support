@@ -38,6 +38,8 @@ class TicketRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     resolved_at: datetime | None
+    response_due_at: datetime | None
+    overdue: bool
 
 
 class TicketListItem(TicketRead):

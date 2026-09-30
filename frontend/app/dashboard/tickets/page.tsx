@@ -3,6 +3,7 @@
 import { SearchIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { NativeSelect } from "@/components/app/native-select";
 import { TicketsTable } from "@/components/app/tickets-table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ export default function TicketsPage() {
   const [status, setStatus] = useState<TicketStatus | null>("WAITING_FOR_AGENT");
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<"urgent" | "newest">("urgent");
   const [query, setQuery] = useState("");
 
   // Search 300ms after the agent stops typing.
@@ -41,8 +43,8 @@ export default function TicketsPage() {
   }, [search]);
 
   const { data, error } = useApi(
-    () => api.listTickets({ status: status ?? undefined, q: query, limit: PAGE_SIZE, offset: page * PAGE_SIZE }),
-    `tickets:${status}:${query}:${page}`,
+    () => api.listTickets({ status: status ?? undefined, q: query, sort, limit: PAGE_SIZE, offset: page * PAGE_SIZE }),
+    `tickets:${status}:${query}:${sort}:${page}`,
   );
   const pages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
 
@@ -53,7 +55,8 @@ export default function TicketsPage() {
         <p className="text-sm text-muted-foreground">Start with the ones waiting for you.</p>
       </div>
 
-      <div className="relative max-w-md">
+      <div className="flex flex-wrap items-center gap-3">
+      <div className="relative w-full max-w-md">
         <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="search"
@@ -67,6 +70,18 @@ export default function TicketsPage() {
           aria-label="Search tickets"
           className="pl-8"
         />
+      </div>
+      <NativeSelect
+        aria-label="Sort tickets"
+        value={sort}
+        onChange={(e) => {
+          setSort(e.target.value as typeof sort);
+          setPage(0);
+        }}
+      >
+        <option value="urgent">Most urgent first</option>
+        <option value="newest">Newest first</option>
+      </NativeSelect>
       </div>
 
       <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Filter by status">

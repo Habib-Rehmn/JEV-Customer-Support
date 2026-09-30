@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ACTION_LABELS, dateTime, percent, ruleLabel, timeAgo } from "@/lib/format";
+import { ACTION_LABELS, URGENCY_LABELS, dateTime, percent, ruleLabel, timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { SupportAction, TicketEvent } from "@/types/api";
 
@@ -50,7 +50,9 @@ function describe(event: TicketEvent): Described {
         icon: BotIcon,
         title: `Jev recommended ${action(d.action)}`,
         detail: `Confidence ${percent(d.confidence as number)}${
-          d.urgency !== undefined && d.urgency !== null ? ` · urgency ${percent(d.urgency as number)}` : ""
+          typeof d.urgency === "number"
+            ? ` · urgency ${URGENCY_LABELS[Math.round(d.urgency)]} (${d.urgency.toFixed(1)}/3)`
+            : ""
         }`,
       };
     case "jev_request_failed":
