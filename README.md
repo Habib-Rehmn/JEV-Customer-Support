@@ -11,7 +11,8 @@ docker compose exec backend python -m scripts.seed   # demo customers + orders
 curl localhost:8000/health
 ```
 
-API docs: http://localhost:8000/docs
+- App: http://localhost:3000 (customer form at `/support`, agent login at `/login`)
+- API docs: http://localhost:8000/docs
 
 ## Users
 
