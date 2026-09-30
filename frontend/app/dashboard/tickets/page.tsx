@@ -96,7 +96,7 @@ export default function TicketsPage() {
             }}
             className={cn(
               "rounded-full border px-3 py-1 text-sm text-muted-foreground hover:text-foreground",
-              status === value && "border-foreground bg-foreground text-background hover:text-background",
+              status === value && "border-primary bg-primary text-primary-foreground hover:text-primary-foreground",
             )}
           >
             {value ? STATUS_LABELS[value] : "All"}

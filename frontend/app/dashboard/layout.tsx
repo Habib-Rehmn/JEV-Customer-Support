@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { Logo } from "@/components/app/logo";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
@@ -31,10 +32,10 @@ export default function DashboardLayout({ children }: LayoutProps<"/dashboard">)
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b">
+      <header className="border-b bg-card">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 px-4">
-          <Link href="/dashboard" className="font-semibold">
-            Jev Support
+          <Link href="/dashboard">
+            <Logo />
           </Link>
           <nav className="flex gap-1">
             {NAV.filter((item) => !item.adminOnly || user.role === "ADMIN").map(({ href, label }) => {
@@ -45,7 +46,7 @@ export default function DashboardLayout({ children }: LayoutProps<"/dashboard">)
                   href={href}
                   className={cn(
                     "rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground",
-                    active && "bg-muted text-foreground",
+                    active && "bg-primary/10 font-medium text-primary hover:text-primary",
                   )}
                 >
                   {label}

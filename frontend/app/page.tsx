@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Logo } from "@/components/app/logo";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -16,7 +17,9 @@ export default function Home() {
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-10 px-4 py-16">
       <ThemeToggle className="fixed top-3 right-3" />
       <div className="space-y-4">
-        <h1 className="text-4xl font-semibold tracking-tight">Jev Support</h1>
+        <h1 className="text-4xl tracking-tight">
+          <Logo size="lg" />
+        </h1>
         <p className="text-lg text-muted-foreground">
           Customer support where AI does the routing and drafting, and people stay in control.
         </p>
@@ -31,8 +34,10 @@ export default function Home() {
       </div>
       <ol className="grid gap-4 sm:grid-cols-2">
         {STEPS.map(([title, text], i) => (
-          <li key={title} className="rounded-xl border p-4">
-            <p className="text-sm text-muted-foreground">Step {i + 1}</p>
+          <li key={title} className="rounded-xl border bg-card p-4">
+            <p className="mb-2 flex size-7 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+              {i + 1}
+            </p>
             <p className="font-medium">{title}</p>
             <p className="text-sm text-muted-foreground">{text}</p>
           </li>

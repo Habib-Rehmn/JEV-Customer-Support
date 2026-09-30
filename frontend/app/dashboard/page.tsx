@@ -1,5 +1,6 @@
 "use client";
 
+import { CheckCircle2Icon, InboxIcon, ShieldAlertIcon, ZapIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -60,17 +61,23 @@ export default function DashboardPage() {
         <>
           <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Ticket counts">
             <StatTile
+              icon={InboxIcon}
+              tone="blue"
               label="Open"
               value={stats.tickets.open}
               hint={`${stats.tickets.total} total${stats.tickets.overdue ? ` · ${stats.tickets.overdue} overdue` : ""}`}
             />
             <StatTile
+              icon={ShieldAlertIcon}
+              tone="orange"
               label="Escalated"
               value={stats.tickets.escalated}
               hint={`${percent(stats.escalation_rate)} escalated at some point`}
             />
-            <StatTile label="Resolved" value={stats.tickets.resolved} />
+            <StatTile icon={CheckCircle2Icon} tone="green" label="Resolved" value={stats.tickets.resolved} />
             <StatTile
+              icon={ZapIcon}
+              tone="violet"
               label="Auto-routed"
               value={stats.tickets.auto_routed}
               hint={`of ${stats.tickets.analyzed} analyzed${
@@ -126,7 +133,7 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle>Recent tickets</CardTitle>
           <CardDescription>
-            <Link href="/dashboard/tickets" className="hover:underline">
+            <Link href="/dashboard/tickets" className="text-primary hover:underline">
               View all tickets →
             </Link>
           </CardDescription>
