@@ -48,10 +48,11 @@ async def create_ticket(
 async def list_tickets(
     service: TicketServiceDep,
     status: TicketStatus | None = None,
+    q: str | None = Query(None, max_length=200, description="Search ticket #, subject, message, customer, order"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ):
-    items, total = await service.list(status=status, limit=limit, offset=offset)
+    items, total = await service.list(status=status, q=q, limit=limit, offset=offset)
     return TicketList(items=items, total=total)
 
 
