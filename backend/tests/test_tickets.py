@@ -73,3 +73,9 @@ async def test_update_rejects_unknown_status(client, seeded, admin_headers):
     ticket_id = (await client.post("/api/v1/tickets", json=TICKET)).json()["id"]
     res = await client.patch(f"/api/v1/tickets/{ticket_id}", json={"status": "DONE"}, headers=admin_headers)
     assert res.status_code == 422
+
+
+async def test_list_includes_current_action(client, seeded):
+    await client.post("/api/v1/tickets", json=TICKET)
+    items = (await client.get("/api/v1/tickets")).json()["items"]
+    assert items[0]["current_action"] == "replacement"

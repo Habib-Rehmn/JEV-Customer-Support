@@ -26,6 +26,9 @@
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
+  --color-viz-accent: var(--viz-accent);
+  --color-viz-muted: var(--viz-muted);
+  --color-viz-track: var(--viz-track);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
@@ -49,6 +52,10 @@
 }
 
 :root {
+  /* Chart marks: accent validated >= 3:1 on the surface (dataviz validator) */
+  --viz-accent: #2a78d6;
+  --viz-muted: oklch(0.87 0 0);
+  --viz-track: oklch(0.967 0 0);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -84,6 +91,9 @@
 }
 
 .dark {
+  --viz-accent: #3987e5;
+  --viz-muted: oklch(0.4 0 0);
+  --viz-track: oklch(0.22 0 0);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

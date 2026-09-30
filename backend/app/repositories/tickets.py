@@ -27,7 +27,9 @@ class TicketRepository:
         if customer_id:
             query = query.where(Ticket.customer_id == customer_id)
         total = await self.session.scalar(select(func.count()).select_from(query.subquery()))
-        result = await self.session.scalars(query.order_by(Ticket.id.desc()).limit(limit).offset(offset))
+        result = await self.session.scalars(
+            query.options(selectinload(Ticket.jev_decisions)).order_by(Ticket.id.desc()).limit(limit).offset(offset)
+        )
         return list(result), total or 0
 
     async def add_decision(self, record: JevDecisionRecord) -> JevDecisionRecord:

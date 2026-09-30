@@ -58,8 +58,12 @@ export interface Ticket {
   resolved_at: string | null;
 }
 
+export interface TicketListItem extends Ticket {
+  current_action: SupportAction | null;
+}
+
 export interface TicketList {
-  items: Ticket[];
+  items: TicketListItem[];
   total: number;
 }
 

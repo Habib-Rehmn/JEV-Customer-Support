@@ -41,5 +41,11 @@ class Ticket(Base):
         return self.ai_responses[0] if self.ai_responses else None
 
     @property
+    def current_action(self) -> str | None:
+        """The action the rules permitted on the latest analysis (what the agent is being asked to approve)."""
+        decision = self.latest_jev_decision
+        return decision.permitted_action if decision else None
+
+    @property
     def latest_jev_decision(self) -> "JevDecisionRecord | None":  # noqa: F821
         return self.jev_decisions[0] if self.jev_decisions else None

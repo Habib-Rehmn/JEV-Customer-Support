@@ -40,6 +40,10 @@ class TicketRead(BaseModel):
     resolved_at: datetime | None
 
 
+class TicketListItem(TicketRead):
+    current_action: SupportAction | None
+
+
 class TicketDetail(TicketRead):
     customer: CustomerRead
     order: OrderRead | None
@@ -48,7 +52,7 @@ class TicketDetail(TicketRead):
 
 
 class TicketList(BaseModel):
-    items: list[TicketRead]
+    items: list[TicketListItem]
     total: int
 
 
