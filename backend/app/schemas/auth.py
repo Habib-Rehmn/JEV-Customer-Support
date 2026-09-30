@@ -26,6 +26,12 @@ class TokenResponse(BaseModel):
     user: UserRead
 
 
+class UserUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    role: UserRole | None = None
+    password: str | None = Field(default=None, min_length=8, max_length=128)
+
+
 class UserCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr

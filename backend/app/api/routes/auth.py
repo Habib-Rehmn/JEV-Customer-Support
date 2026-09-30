@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import AdminUser, CurrentUser, SessionDep
 from app.repositories.users import UserRepository
-from app.schemas.auth import LoginRequest, TokenResponse, UserCreate, UserRead
-from app.services.auth_service import AuthService, EmailTaken, InvalidCredentials
+from app.schemas.auth import LoginRequest, TokenResponse, UserCreate, UserRead, UserUpdate
+from app.services.auth_service import AuthService, EmailTaken, InvalidCredentials, LastAdmin, UserNotFound
 
 router = APIRouter(tags=["auth"])
 
@@ -33,3 +33,13 @@ async def create_user(data: UserCreate, session: SessionDep, _: AdminUser):
         return await AuthService(session).create_user(data)
     except EmailTaken:
         raise HTTPException(status.HTTP_409_CONFLICT, "A user with this email already exists")
+
+
+@router.patch("/users/{user_id}", response_model=UserRead)
+async def update_user(user_id: int, data: UserUpdate, session: SessionDep, _: AdminUser):
+    try:
+        return await AuthService(session).update_user(user_id, data)
+    except UserNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    except LastAdmin:
+        raise HTTPException(status.HTTP_409_CONFLICT, "There must be at least one admin")

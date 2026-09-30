@@ -83,6 +83,11 @@ const post = <T>(path: string, body: unknown = {}) => request<T>(path, { method:
 export const api = {
   login: (email: string, password: string) => post<TokenResponse>("/auth/login", { email, password }),
   me: () => request<User>("/auth/me"),
+  listUsers: () => request<User[]>("/users"),
+  createUser: (data: { name: string; email: string; password: string; role: User["role"] }) =>
+    post<User>("/users", data),
+  updateUser: (id: number, data: { name?: string; role?: User["role"]; password?: string }) =>
+    request<User>(`/users/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
   createTicket: (data: TicketCreate) => post<Ticket>("/tickets", data),
   listTickets: (params: { status?: TicketStatus; limit?: number; offset?: number } = {}) => {

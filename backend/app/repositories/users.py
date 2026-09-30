@@ -2,6 +2,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import User
+from app.models.enums import UserRole
 
 
 class UserRepository:
@@ -16,6 +17,9 @@ class UserRepository:
 
     async def list(self) -> list[User]:
         return list(await self.session.scalars(select(User).order_by(User.id)))
+
+    async def count_admins(self) -> int:
+        return await self.session.scalar(select(func.count()).where(User.role == UserRole.ADMIN)) or 0
 
     async def add(self, user: User) -> User:
         self.session.add(user)

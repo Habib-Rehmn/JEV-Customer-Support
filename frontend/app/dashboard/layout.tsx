@@ -10,8 +10,9 @@ import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { href: "/dashboard", label: "Overview" },
-  { href: "/dashboard/tickets", label: "Tickets" },
+  { href: "/dashboard", label: "Overview", adminOnly: false },
+  { href: "/dashboard/tickets", label: "Tickets", adminOnly: false },
+  { href: "/dashboard/users", label: "Users", adminOnly: true },
 ];
 
 export default function DashboardLayout({ children }: LayoutProps<"/dashboard">) {
@@ -35,7 +36,7 @@ export default function DashboardLayout({ children }: LayoutProps<"/dashboard">)
             Jev Support
           </Link>
           <nav className="flex gap-1">
-            {NAV.map(({ href, label }) => {
+            {NAV.filter((item) => !item.adminOnly || user.role === "ADMIN").map(({ href, label }) => {
               const active = href === "/dashboard" ? pathname === href : pathname.startsWith(href);
               return (
                 <Link

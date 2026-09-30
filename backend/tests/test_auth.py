@@ -105,3 +105,35 @@ async def test_short_password_is_rejected(anon_client, users, admin_headers):
         "/api/v1/users", json={"name": "X", "email": "x@example.com", "password": "short"}, headers=admin_headers
     )
     assert res.status_code == 422
+
+
+async def test_admin_can_change_role_name_and_password(anon_client, users, admin_headers):
+    res = await anon_client.patch(
+        f"/api/v1/users/{users['agent']}",
+        json={"role": "ADMIN", "name": "Amy B.", "password": "new-password-1"},
+        headers=admin_headers,
+    )
+    assert res.status_code == 200
+    assert res.json()["role"] == "ADMIN"
+    assert res.json()["name"] == "Amy B."
+    assert (await login(anon_client, "agent@example.com", "new-password-1")).status_code == 200
+    assert (await login(anon_client, "agent@example.com")).status_code == 401
+
+
+async def test_last_admin_cannot_be_demoted(anon_client, users, admin_headers):
+    res = await anon_client.patch(f"/api/v1/users/{users['admin']}", json={"role": "AGENT"}, headers=admin_headers)
+    assert res.status_code == 409
+
+
+async def test_admin_can_be_demoted_when_another_admin_exists(anon_client, users, admin_headers):
+    await anon_client.patch(f"/api/v1/users/{users['agent']}", json={"role": "ADMIN"}, headers=admin_headers)
+    res = await anon_client.patch(f"/api/v1/users/{users['admin']}", json={"role": "AGENT"}, headers=admin_headers)
+    assert res.status_code == 200
+
+
+async def test_update_missing_user_returns_404(anon_client, users, admin_headers):
+    assert (await anon_client.patch("/api/v1/users/999", json={"name": "X"}, headers=admin_headers)).status_code == 404
+
+
+async def test_agent_cannot_update_users(client, users):
+    assert (await client.patch(f"/api/v1/users/{users['agent']}", json={"role": "ADMIN"})).status_code == 403

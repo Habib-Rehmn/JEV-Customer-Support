@@ -4,7 +4,8 @@ from app.core.logging import get_logger
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models import User
 from app.repositories.users import UserRepository
-from app.schemas.auth import UserCreate
+from app.models.enums import UserRole
+from app.schemas.auth import UserCreate, UserUpdate
 
 logger = get_logger(__name__)
 
@@ -18,6 +19,14 @@ class InvalidCredentials(Exception):
 
 class EmailTaken(Exception):
     pass
+
+
+class UserNotFound(Exception):
+    pass
+
+
+class LastAdmin(Exception):
+    """Refused: the change would leave no admin to manage users."""
 
 
 class AuthService:
@@ -41,4 +50,21 @@ class AuthService:
             name=data.name, email=data.email.lower(), password_hash=hash_password(data.password), role=data.role,
         ))
         await self.session.commit()
+        return user
+
+    async def update_user(self, user_id: int, data: UserUpdate) -> User:
+        user = await self.users.get(user_id)
+        if user is None:
+            raise UserNotFound(user_id)
+        if data.role == UserRole.AGENT and user.role == UserRole.ADMIN and await self.users.count_admins() <= 1:
+            raise LastAdmin()
+        if data.name is not None:
+            user.name = data.name
+        if data.role is not None:
+            user.role = data.role
+        if data.password is not None:
+            user.password_hash = hash_password(data.password)
+        await self.session.commit()
+        # Field names only, never values: the password must not reach the logs.
+        logger.info("user_updated user=%s fields=%s", user.id, sorted(data.model_dump(exclude_none=True)))
         return user
