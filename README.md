@@ -1,6 +1,6 @@
 # Jev Support
 
-AI-assisted customer support: Jev (via BeatAPI) classifies tickets, deterministic rules decide what's allowed, OpenAI drafts the reply, and a support agent reviews it. See [project.md](project.md) for the full plan.
+AI-assisted customer support: Jev (via BeatAPI) classifies tickets, deterministic rules decide what's allowed, OpenAI drafts the reply, and a support agent reviews it.
 
 ## Run locally
 
