@@ -2,7 +2,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import AuditLog, JevDecisionRecord, Ticket
+from app.models import AIResponse, AuditLog, JevDecisionRecord, Ticket
 
 
 class TicketRepository:
@@ -11,7 +11,8 @@ class TicketRepository:
 
     async def get(self, ticket_id: int, with_relations: bool = False) -> Ticket | None:
         options = (
-            [selectinload(Ticket.customer), selectinload(Ticket.order), selectinload(Ticket.jev_decisions)]
+            [selectinload(Ticket.customer), selectinload(Ticket.order), selectinload(Ticket.jev_decisions),
+             selectinload(Ticket.ai_responses)]
             if with_relations
             else []
         )
@@ -33,6 +34,11 @@ class TicketRepository:
         self.session.add(record)
         await self.session.flush()
         return record
+
+    async def add_response(self, response: AIResponse) -> AIResponse:
+        self.session.add(response)
+        await self.session.flush()
+        return response
 
     async def add(self, ticket: Ticket) -> Ticket:
         self.session.add(ticket)

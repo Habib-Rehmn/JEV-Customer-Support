@@ -1,9 +1,16 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
 
-from app.api.deps import JevServiceDep, SessionFactoryDep, TicketServiceDep
+from app.api.deps import JevServiceDep, OpenAIServiceDep, SessionFactoryDep, TicketServiceDep
 from app.models.enums import TicketStatus
+from app.schemas.response import AIResponseRead
 from app.schemas.ticket import TicketCreate, TicketDetail, TicketList, TicketRead, TicketUpdate
-from app.services.ticket_service import TicketNotAnalyzable, TicketNotFound, analyze_ticket_job
+from app.services.ticket_service import (
+    NoDecisionYet,
+    ResponseGenerationFailed,
+    TicketNotAnalyzable,
+    TicketNotFound,
+    analyze_ticket_job,
+)
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -15,10 +22,11 @@ async def create_ticket(
     background: BackgroundTasks,
     session_factory: SessionFactoryDep,
     jev: JevServiceDep,
+    openai: OpenAIServiceDep,
 ):
     ticket = await service.create(data)
     ticket = await service.start_analysis(ticket.id)
-    background.add_task(analyze_ticket_job, ticket.id, session_factory, jev)
+    background.add_task(analyze_ticket_job, ticket.id, session_factory, jev, openai)
     return ticket
 
 
@@ -56,6 +64,7 @@ async def analyze_ticket(
     background: BackgroundTasks,
     session_factory: SessionFactoryDep,
     jev: JevServiceDep,
+    openai: OpenAIServiceDep,
 ):
     try:
         ticket = await service.start_analysis(ticket_id)
@@ -63,5 +72,19 @@ async def analyze_ticket(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Ticket not found")
     except TicketNotAnalyzable as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, f"Ticket in status {exc} cannot be analyzed")
-    background.add_task(analyze_ticket_job, ticket.id, session_factory, jev)
+    background.add_task(analyze_ticket_job, ticket.id, session_factory, jev, openai)
     return ticket
+
+
+@router.post("/{ticket_id}/generate-response", response_model=AIResponseRead, status_code=status.HTTP_201_CREATED)
+async def generate_response(ticket_id: int, service: TicketServiceDep, openai: OpenAIServiceDep):
+    try:
+        return await service.generate_response(ticket_id, openai)
+    except TicketNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Ticket not found")
+    except NoDecisionYet:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Ticket has no permitted action yet; analyze it first")
+    except ResponseGenerationFailed:
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY, "Reply generation failed; try again or write the reply manually"
+        )

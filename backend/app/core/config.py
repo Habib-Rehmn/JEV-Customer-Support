@@ -12,7 +12,9 @@ class Settings(BaseSettings):
     jev_timeout_seconds: float = 30.0
 
     openai_api_key: str = ""
-    openai_model: str = "gpt-4o-mini"
+    openai_model: str = "gpt-5.4-mini"
+    openai_reasoning_effort: str = "low"  # set empty for non-reasoning models such as gpt-4o-mini
+    openai_timeout_seconds: float = 60.0
 
     jwt_secret: str = "change-me"
 

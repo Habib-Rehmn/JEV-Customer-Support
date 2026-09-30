@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.logging import get_logger
 from app.db.base import utcnow
-from app.models import Customer, JevDecisionRecord, Ticket
+from app.models import AIResponse, Customer, JevDecisionRecord, Ticket
 from app.models.enums import SupportAction, TicketPriority, TicketStatus
 from app.repositories.customers import CustomerRepository
 from app.repositories.orders import OrderRepository
@@ -11,6 +11,7 @@ from app.schemas.jev import JevDecision
 from app.schemas.ticket import TicketCreate, TicketUpdate
 from app.services.context_builder import ContextBuilder
 from app.services.jev_service import JevError, JevService
+from app.services.openai_service import OpenAIError, OpenAIService
 from app.services.rules_service import RuleOutcome, evaluate
 
 logger = get_logger(__name__)
@@ -29,6 +30,14 @@ class TicketNotFound(Exception):
 
 
 class TicketNotAnalyzable(Exception):
+    pass
+
+
+class NoDecisionYet(Exception):
+    """A reply can only be generated once the rules have permitted an action."""
+
+
+class ResponseGenerationFailed(Exception):
     pass
 
 
@@ -93,7 +102,8 @@ class TicketService:
         await self.session.commit()
         return ticket
 
-    async def run_analysis(self, ticket_id: int, jev: JevService) -> None:
+    async def run_analysis(self, ticket_id: int, jev: JevService) -> bool:
+        """Jev decision + business rules. Returns False if Jev failed (ticket is then JEV_FAILED)."""
         ticket = await self.get(ticket_id)
         context = await ContextBuilder(self.session).build(ticket)
         await self.tickets.log(ticket.id, "jev_request_started", context=context)
@@ -109,7 +119,7 @@ class TicketService:
             await self.tickets.log(ticket.id, "jev_request_failed", error=type(exc).__name__, detail=str(exc))
             await self.session.commit()
             logger.warning("jev_request_failed ticket=%s error=%r", ticket.id, exc)
-            return
+            return False
 
         await self.tickets.log(
             ticket.id, "jev_request_completed", action=decision.action, confidence=decision.confidence
@@ -128,6 +138,40 @@ class TicketService:
             "analysis_completed ticket=%s recommended=%s permitted=%s status=%s",
             ticket.id, decision.action, outcome.permitted_action, outcome.status,
         )
+        return True
+
+    async def generate_response(self, ticket_id: int, openai: OpenAIService) -> AIResponse:
+        """Draft a reply for the permitted action. On failure the decision stays and the agent writes manually."""
+        ticket = await self.get(ticket_id)
+        decision = ticket.latest_jev_decision
+        if decision is None or decision.permitted_action is None:
+            raise NoDecisionYet(ticket.id)
+        action = SupportAction(decision.permitted_action)
+
+        await self.tickets.log(ticket.id, "openai_generation_started", action=action)
+        try:
+            reply = await openai.generate_reply(
+                customer_name=ticket.customer.name,
+                subject=ticket.subject,
+                message=ticket.message,
+                action=action,
+                order_number=ticket.order.order_number if ticket.order else None,
+            )
+        except Exception as exc:
+            if not isinstance(exc, OpenAIError):
+                logger.exception("openai_generation_failed unexpected error ticket=%s", ticket.id)
+            await self.tickets.log(ticket.id, "openai_generation_failed", error=type(exc).__name__, detail=str(exc))
+            await self.session.commit()
+            logger.warning("openai_generation_failed ticket=%s error=%r", ticket.id, exc)
+            raise ResponseGenerationFailed(str(exc)) from exc
+
+        response = await self.tickets.add_response(
+            AIResponse(ticket_id=ticket.id, generated_text=reply.text, final_text=reply.text, model=reply.model)
+        )
+        await self.tickets.log(ticket.id, "openai_generation_completed", response_id=response.id, model=reply.model)
+        await self.session.commit()
+        logger.info("openai_generation_completed ticket=%s response=%s", ticket.id, response.id)
+        return response
 
 
 def _decision_record(ticket_id: int, decision: JevDecision, outcome: RuleOutcome) -> JevDecisionRecord:
@@ -150,7 +194,15 @@ def _decision_record(ticket_id: int, decision: JevDecision, outcome: RuleOutcome
     )
 
 
-async def analyze_ticket_job(ticket_id: int, session_factory: async_sessionmaker, jev: JevService) -> None:
+async def analyze_ticket_job(
+    ticket_id: int, session_factory: async_sessionmaker, jev: JevService, openai: OpenAIService
+) -> None:
     """Background task entry point: runs with its own DB session, after the HTTP response is sent."""
     async with session_factory() as session:
-        await TicketService(session).run_analysis(ticket_id, jev)
+        service = TicketService(session)
+        if not await service.run_analysis(ticket_id, jev):
+            return
+        try:
+            await service.generate_response(ticket_id, openai)
+        except ResponseGenerationFailed:
+            pass  # already logged; the agent can regenerate or write the reply manually

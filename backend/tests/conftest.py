@@ -14,6 +14,7 @@ from app.db.session import get_session
 from app.main import app
 from app.models import Customer, Order
 from app.services.jev_service import get_jev_service, parse_response
+from app.services.openai_service import GeneratedReply, get_openai_service
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -72,13 +73,30 @@ async def seeded(session_factory):
         return {"ali": ali.id, "sara": sara.id}
 
 
+class FakeOpenAI:
+    def __init__(self):
+        self.error: Exception | None = None
+        self.calls: list[dict] = []
+
+    async def generate_reply(self, **fields):
+        self.calls.append(fields)
+        if self.error:
+            raise self.error
+        return GeneratedReply(text=f"Hi {fields['customer_name']}, draft for {fields['action']}.", model="fake-model")
+
+
 @pytest.fixture
 def fake_jev():
     return FakeJev()
 
 
 @pytest.fixture
-async def client(session_factory, fake_jev):
+def fake_openai():
+    return FakeOpenAI()
+
+
+@pytest.fixture
+async def client(session_factory, fake_jev, fake_openai):
     async def override_session():
         async with session_factory() as session:
             yield session
@@ -86,6 +104,7 @@ async def client(session_factory, fake_jev):
     app.dependency_overrides[get_session] = override_session
     app.dependency_overrides[get_session_factory] = lambda: session_factory
     app.dependency_overrides[get_jev_service] = lambda: fake_jev
+    app.dependency_overrides[get_openai_service] = lambda: fake_openai
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()

@@ -32,6 +32,14 @@ class Ticket(Base):
         order_by="JevDecisionRecord.id.desc()"
     )
 
+    ai_responses: Mapped[list["AIResponse"]] = relationship(  # noqa: F821
+        order_by="AIResponse.id.desc()"
+    )
+
+    @property
+    def latest_ai_response(self) -> "AIResponse | None":  # noqa: F821
+        return self.ai_responses[0] if self.ai_responses else None
+
     @property
     def latest_jev_decision(self) -> "JevDecisionRecord | None":  # noqa: F821
         return self.jev_decisions[0] if self.jev_decisions else None

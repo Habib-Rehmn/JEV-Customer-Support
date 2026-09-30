@@ -6,6 +6,7 @@ from app.models.enums import SupportAction, TicketPriority, TicketStatus
 from app.schemas.customer import CustomerRead
 from app.schemas.jev import JevDecisionRead
 from app.schemas.order import OrderRead
+from app.schemas.response import AIResponseRead
 
 
 class TicketCreate(BaseModel):
@@ -42,6 +43,7 @@ class TicketDetail(TicketRead):
     customer: CustomerRead
     order: OrderRead | None
     latest_jev_decision: JevDecisionRead | None
+    latest_ai_response: AIResponseRead | None
 
 
 class TicketList(BaseModel):
