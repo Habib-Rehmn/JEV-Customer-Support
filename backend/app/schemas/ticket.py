@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -49,3 +50,22 @@ class TicketDetail(TicketRead):
 class TicketList(BaseModel):
     items: list[TicketRead]
     total: int
+
+
+class ResponseEdit(BaseModel):
+    final_text: str = Field(min_length=1, max_length=10_000)
+
+
+class ApproveRequest(BaseModel):
+    final_text: str | None = Field(default=None, min_length=1, max_length=10_000)
+    action: SupportAction | None = None  # defaults to the rules' permitted action
+    next_status: Literal[TicketStatus.RESOLVED, TicketStatus.WAITING_FOR_CUSTOMER] = TicketStatus.RESOLVED
+
+
+class EscalateRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=1_000)
+
+
+class ResolveRequest(BaseModel):
+    final_action: SupportAction
+    note: str | None = Field(default=None, max_length=1_000)

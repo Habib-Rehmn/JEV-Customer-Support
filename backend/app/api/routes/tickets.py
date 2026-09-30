@@ -1,16 +1,20 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Query, status
 
 from app.api.deps import JevServiceDep, OpenAIServiceDep, SessionFactoryDep, TicketServiceDep
 from app.models.enums import TicketStatus
 from app.schemas.response import AIResponseRead
-from app.schemas.ticket import TicketCreate, TicketDetail, TicketList, TicketRead, TicketUpdate
-from app.services.ticket_service import (
-    NoDecisionYet,
-    ResponseGenerationFailed,
-    TicketNotAnalyzable,
-    TicketNotFound,
-    analyze_ticket_job,
+from app.schemas.ticket import (
+    ApproveRequest,
+    EscalateRequest,
+    ResolveRequest,
+    ResponseEdit,
+    TicketCreate,
+    TicketDetail,
+    TicketList,
+    TicketRead,
+    TicketUpdate,
 )
+from app.services.ticket_service import analyze_ticket_job
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -43,18 +47,12 @@ async def list_tickets(
 
 @router.get("/{ticket_id}", response_model=TicketDetail)
 async def get_ticket(ticket_id: int, service: TicketServiceDep):
-    try:
-        return await service.get(ticket_id)
-    except TicketNotFound:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Ticket not found")
+    return await service.get(ticket_id)
 
 
 @router.patch("/{ticket_id}", response_model=TicketRead)
 async def update_ticket(ticket_id: int, data: TicketUpdate, service: TicketServiceDep):
-    try:
-        return await service.update(ticket_id, data)
-    except TicketNotFound:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Ticket not found")
+    return await service.update(ticket_id, data)
 
 
 @router.post("/{ticket_id}/analyze", response_model=TicketRead, status_code=status.HTTP_202_ACCEPTED)
@@ -66,25 +64,33 @@ async def analyze_ticket(
     jev: JevServiceDep,
     openai: OpenAIServiceDep,
 ):
-    try:
-        ticket = await service.start_analysis(ticket_id)
-    except TicketNotFound:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Ticket not found")
-    except TicketNotAnalyzable as exc:
-        raise HTTPException(status.HTTP_409_CONFLICT, f"Ticket in status {exc} cannot be analyzed")
+    ticket = await service.start_analysis(ticket_id)
     background.add_task(analyze_ticket_job, ticket.id, session_factory, jev, openai)
     return ticket
 
 
 @router.post("/{ticket_id}/generate-response", response_model=AIResponseRead, status_code=status.HTTP_201_CREATED)
 async def generate_response(ticket_id: int, service: TicketServiceDep, openai: OpenAIServiceDep):
-    try:
-        return await service.generate_response(ticket_id, openai)
-    except TicketNotFound:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Ticket not found")
-    except NoDecisionYet:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Ticket has no permitted action yet; analyze it first")
-    except ResponseGenerationFailed:
-        raise HTTPException(
-            status.HTTP_502_BAD_GATEWAY, "Reply generation failed; try again or write the reply manually"
-        )
+    return await service.generate_response(ticket_id, openai)
+
+
+@router.put("/{ticket_id}/response", response_model=AIResponseRead)
+async def edit_response(ticket_id: int, data: ResponseEdit, service: TicketServiceDep):
+    return await service.edit_response(ticket_id, data.final_text)
+
+
+@router.post("/{ticket_id}/approve", response_model=TicketRead)
+async def approve_ticket(ticket_id: int, data: ApproveRequest, service: TicketServiceDep):
+    return await service.approve(
+        ticket_id, final_text=data.final_text, action=data.action, next_status=data.next_status
+    )
+
+
+@router.post("/{ticket_id}/escalate", response_model=TicketRead)
+async def escalate_ticket(ticket_id: int, data: EscalateRequest, service: TicketServiceDep):
+    return await service.escalate(ticket_id, data.reason)
+
+
+@router.post("/{ticket_id}/resolve", response_model=TicketRead)
+async def resolve_ticket(ticket_id: int, data: ResolveRequest, service: TicketServiceDep):
+    return await service.resolve(ticket_id, data.final_action, data.note)
