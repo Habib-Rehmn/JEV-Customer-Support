@@ -2,6 +2,7 @@ from sqlalchemy import select
 
 from app.models import AuditLog, Ticket
 from app.services.jev_service import JevUnavailable
+from tests.conftest import jev_response
 
 TICKET = {
     "customer_name": "Ali Khan",
@@ -27,9 +28,34 @@ async def test_new_ticket_is_analyzed_automatically(client, seeded, session_fact
     assert decision["selected_action"] == "replacement"
     assert decision["replacement_probability"] == 1
     assert decision["item_damaged_probability"] == 0.92
+    # Damaged $89.99 item delivered today: replacement permitted without extra approval.
+    assert decision["permitted_action"] == "replacement"
+    assert decision["requires_approval"] is False
     assert await events(session_factory, ticket_id) == [
-        "ticket_created", "jev_request_started", "jev_request_completed",
+        "ticket_created", "jev_request_started", "jev_request_completed", "rule_triggered",
     ]
+
+
+async def test_rules_escalate_billing_dispute(client, seeded, fake_jev, session_factory):
+    fake_jev.response = jev_response("billing", billing_dispute=0.97)
+    ticket_id = (await client.post("/api/v1/tickets", json={**TICKET, "subject": "Charged twice"})).json()["id"]
+
+    body = (await client.get(f"/api/v1/tickets/{ticket_id}")).json()
+    assert body["status"] == "ESCALATED"
+    assert body["priority"] == "HIGH"
+    decision = body["latest_jev_decision"]
+    assert decision["selected_action"] == "billing"
+    assert decision["permitted_action"] == "human_escalation"
+    assert decision["rule_hits"][0]["rule"] == "billing_dispute"
+    assert (await events(session_factory, ticket_id))[-2:] == ["rule_triggered", "ticket_escalated"]
+
+
+async def test_rules_escalate_refund_for_unknown_order(client, seeded, fake_jev):
+    fake_jev.response = jev_response("refund")
+    ticket_id = (await client.post("/api/v1/tickets", json={**TICKET, "order_number": "ORD-404"})).json()["id"]
+    body = (await client.get(f"/api/v1/tickets/{ticket_id}")).json()
+    assert body["status"] == "ESCALATED"
+    assert body["latest_jev_decision"]["rule_hits"][0]["rule"] == "unknown_order"
 
 
 async def test_context_sent_to_jev(client, seeded, fake_jev):

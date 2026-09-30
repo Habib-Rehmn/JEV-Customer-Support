@@ -29,4 +29,7 @@ class JevDecisionRead(BaseModel):
     human_escalation_probability: float
     billing_dispute_probability: float | None
     item_damaged_probability: float | None
+    permitted_action: SupportAction | None
+    requires_approval: bool | None
+    rule_hits: list[dict] | None
     created_at: datetime

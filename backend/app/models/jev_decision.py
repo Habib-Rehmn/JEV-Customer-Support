@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, String
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, utcnow
@@ -26,5 +26,10 @@ class JevDecisionRecord(Base):
     item_damaged_probability: Mapped[float | None] = mapped_column(Float)
 
     raw_response: Mapped[dict] = mapped_column(JSON)
+
+    # Outcome of the business rules applied to this decision.
+    permitted_action: Mapped[str | None] = mapped_column(String(30))
+    requires_approval: Mapped[bool | None] = mapped_column(Boolean)
+    rule_hits: Mapped[list | None] = mapped_column(JSON)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

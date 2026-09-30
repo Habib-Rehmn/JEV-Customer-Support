@@ -27,13 +27,25 @@ class FakeJev:
 
     def __init__(self):
         self.error: Exception | None = None
+        self.response: dict = load_fixture("jev_replacement_response.json")
         self.contexts: list[dict] = []
 
     async def classify_ticket(self, context: dict):
         self.contexts.append(context)
         if self.error:
             raise self.error
-        return parse_response(load_fixture("jev_replacement_response.json"))
+        return parse_response(self.response)
+
+
+def jev_response(action: str, confidence: float = 1.0, billing_dispute: float = 0.0, item_damaged: float = 0.0) -> dict:
+    """A BeatAPI-shaped response with all probability on `action`."""
+    probabilities = {a: 0.0 for a in ["refund", "replacement", "technical_support", "billing", "human_escalation"]}
+    probabilities[action] = 1.0
+    return {"answers": {
+        "support_action": {"type": "choice", "choice": action, "confidence": confidence, "probabilities": probabilities},
+        "billing_dispute": {"type": "noul", "noul": billing_dispute},
+        "item_damaged": {"type": "noul", "noul": item_damaged},
+    }}
 
 
 @pytest.fixture

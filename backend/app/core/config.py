@@ -16,5 +16,13 @@ class Settings(BaseSettings):
 
     jwt_secret: str = "change-me"
 
+    # Business rules (see services/rules_service.py)
+    rule_min_confidence: float = 0.70
+    rule_refund_approval_limit: float = 500.0
+    rule_max_refunds_30_days: int = 3
+    rule_replacement_window_days: int = 30
+    rule_auto_replacement_limit: float = 100.0
+    rule_signal_threshold: float = 0.5
+
 
 settings = Settings()

@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.logging import get_logger
 from app.db.base import utcnow
 from app.models import Customer, JevDecisionRecord, Ticket
-from app.models.enums import SupportAction, TicketStatus
+from app.models.enums import SupportAction, TicketPriority, TicketStatus
 from app.repositories.customers import CustomerRepository
 from app.repositories.orders import OrderRepository
 from app.repositories.tickets import TicketRepository
@@ -11,6 +11,7 @@ from app.schemas.jev import JevDecision
 from app.schemas.ticket import TicketCreate, TicketUpdate
 from app.services.context_builder import ContextBuilder
 from app.services.jev_service import JevError, JevService
+from app.services.rules_service import RuleOutcome, evaluate
 
 logger = get_logger(__name__)
 
@@ -110,16 +111,26 @@ class TicketService:
             logger.warning("jev_request_failed ticket=%s error=%r", ticket.id, exc)
             return
 
-        await self.tickets.add_decision(_decision_record(ticket.id, decision))
-        ticket.status = TicketStatus.WAITING_FOR_AGENT
         await self.tickets.log(
             ticket.id, "jev_request_completed", action=decision.action, confidence=decision.confidence
         )
+
+        outcome = evaluate(decision, context)
+        await self.tickets.add_decision(_decision_record(ticket.id, decision, outcome))
+        for hit in outcome.hits:
+            await self.tickets.log(ticket.id, "rule_triggered", **hit)
+        ticket.status = outcome.status
+        if outcome.escalated:
+            ticket.priority = TicketPriority.HIGH
+            await self.tickets.log(ticket.id, "ticket_escalated", by="rules")
         await self.session.commit()
-        logger.info("jev_request_completed ticket=%s action=%s", ticket.id, decision.action)
+        logger.info(
+            "analysis_completed ticket=%s recommended=%s permitted=%s status=%s",
+            ticket.id, decision.action, outcome.permitted_action, outcome.status,
+        )
 
 
-def _decision_record(ticket_id: int, decision: JevDecision) -> JevDecisionRecord:
+def _decision_record(ticket_id: int, decision: JevDecision, outcome: RuleOutcome) -> JevDecisionRecord:
     p = decision.probabilities
     return JevDecisionRecord(
         ticket_id=ticket_id,
@@ -133,6 +144,9 @@ def _decision_record(ticket_id: int, decision: JevDecision) -> JevDecisionRecord
         billing_dispute_probability=decision.billing_dispute,
         item_damaged_probability=decision.item_damaged,
         raw_response=decision.raw_response,
+        permitted_action=outcome.permitted_action,
+        requires_approval=outcome.requires_approval,
+        rule_hits=outcome.hits,
     )
 
 
