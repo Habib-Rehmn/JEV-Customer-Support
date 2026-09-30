@@ -157,3 +157,48 @@ export interface AnalyticsOverview {
   jev_human_agreement_rate: number | null;
   reply_edit_rate: number | null;
 }
+
+export interface RulesPolicy {
+  min_confidence: number;
+  refund_approval_limit: number;
+  max_refunds_30_days: number;
+  replacement_window_days: number;
+  auto_replacement_limit: number;
+  signal_threshold: number;
+}
+
+export type RuleOutcomeKind = "escalated" | "needs_approval" | "pre_approved";
+
+export interface SimulatedOutcome {
+  outcome: RuleOutcomeKind;
+  permitted_action: SupportAction;
+  rules: string[];
+}
+
+export interface SimulationResult {
+  current_policy: RulesPolicy;
+  proposed_policy: RulesPolicy;
+  replayed: number;
+  skipped: number;
+  current: Record<RuleOutcomeKind, number>;
+  proposed: Record<RuleOutcomeKind, number>;
+  changed: {
+    ticket_id: number;
+    subject: string;
+    recommended_action: SupportAction;
+    current: SimulatedOutcome;
+    proposed: SimulatedOutcome;
+  }[];
+}
+
+export interface Calibration {
+  min_confidence: number;
+  buckets: {
+    label: string;
+    min: number;
+    max: number;
+    decisions: number;
+    closed_out: number;
+    agreement_rate: number | null;
+  }[];
+}

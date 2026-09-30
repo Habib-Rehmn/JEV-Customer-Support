@@ -10,7 +10,7 @@ Jev decides · rules permit · OpenAI writes · agents approve
 ![Next.js 16](https://img.shields.io/badge/Next.js_16-000000?logo=nextdotjs&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL_16-4169E1?logo=postgresql&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker_Compose-2496ED?logo=docker&logoColor=white)
-![Tests](https://img.shields.io/badge/backend_tests-169_passing-2ea44f)
+![Tests](https://img.shields.io/badge/backend_tests-177_passing-2ea44f)
 
 ![Support dashboard](docs/screenshots/dashboard-light.png)
 
@@ -55,6 +55,7 @@ Each layer has one job, and each can fail without losing the ticket:
   - Jev's probability bars and which rules fired
   - A reply editor with approve & send, escalate, resolve without reply, follow-ups and retry
   - Overriding the rules is allowed, and recorded
+- **Rules lab (admins).** Try new thresholds against real past tickets before changing them: every analyzed ticket is replayed with Jev's stored answer and the exact context it saw, with no API calls. A calibration chart shows how often humans agreed with Jev at each confidence level, so you can tell whether the confidence threshold does anything.
 - **Analytics.** Ticket counts, escalation rate, Jev confidence, tickets by category, the **Jev vs human agreement rate**, override rate and reply edit rate.
 - **Search** by `#number`, subject, message, customer or order number.
 - **Roles.** Agents answer tickets. Admins also manage users.
@@ -116,7 +117,7 @@ The rules run in order after Jev answers. The first escalation wins.
 | Replacement for an undelivered order, or **> 30 days** after delivery | Escalate |
 | Damaged item under **$100** | Replacement pre-approved |
 
-The rules live in [`backend/app/services/rules_service.py`](backend/app/services/rules_service.py). The numbers in bold are `RULE_*` settings in `.env`.
+The rules live in [`backend/app/services/rules_service.py`](backend/app/services/rules_service.py). The numbers in bold are `RULE_*` settings in `.env`. Before changing them, try the new values in the **Rules lab** (`/dashboard/rules`) to see which past tickets would change.
 
 > [!IMPORTANT]
 > OpenAI may only state what is in [`backend/app/services/policies.py`](backend/app/services/policies.py). The refund, billing and escalation timelines in that file are **placeholders**. Replace them with your real policies before customers see any replies.
@@ -181,6 +182,8 @@ Everything is under `/api/v1`. Customers can create tickets without logging in. 
 | `PATCH` | `/tickets/{id}` | admin | Raw field correction |
 | `GET` | `/customers`, `/customers/{id}[/tickets\|/orders]` | agent | Customer lookups |
 | `GET` | `/analytics/overview?since_days=` | agent | Dashboard metrics |
+| `GET` | `/analytics/rules` · `/analytics/calibration` | agent | Live thresholds · agreement by Jev confidence |
+| `POST` | `/analytics/rules/simulate` | admin | Replay past tickets with proposed thresholds (read-only) |
 | `POST` | `/auth/login` · `GET /auth/me` | — | Authentication |
 | `GET` `POST` `PATCH` | `/users`, `/users/{id}` | admin | User management |
 
@@ -199,9 +202,9 @@ Everything is under `/api/v1`. Customers can create tickets without logging in. 
 │   │   └── schemas/          Pydantic request/response models
 │   ├── alembic/versions/     migrations
 │   ├── scripts/              seed.py, create_user.py
-│   └── tests/                169 tests: fakes for Jev/OpenAI, recorded real BeatAPI fixture
+│   └── tests/                177 tests: fakes for Jev/OpenAI, recorded real BeatAPI fixture
 ├── frontend/                 Next.js 16 · TypeScript · Tailwind v4 · shadcn/ui
-│   ├── app/                  /, /support, /login, /dashboard/{,tickets,tickets/[id],users}
+│   ├── app/                  /, /support, /login, /dashboard/{,tickets,tickets/[id],rules,users}
 │   ├── components/app/       ticket table, Jev decision card, reply panel, charts
 │   └── lib/                  typed API client, auth, theme
 ├── docs/screenshots/

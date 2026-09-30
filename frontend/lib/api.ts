@@ -1,6 +1,9 @@
 import type {
   AIResponse,
   AnalyticsOverview,
+  Calibration,
+  RulesPolicy,
+  SimulationResult,
   SupportAction,
   Ticket,
   TicketCreate,
@@ -112,6 +115,9 @@ export const api = {
   resolve: (id: number, final_action: SupportAction, note?: string) =>
     post<Ticket>(`/tickets/${id}/resolve`, { final_action, note }),
 
+  rulesPolicy: () => request<RulesPolicy>("/analytics/rules"),
+  simulateRules: (policy: RulesPolicy) => post<SimulationResult>("/analytics/rules/simulate", policy),
+  calibration: () => request<Calibration>("/analytics/calibration"),
   analytics: (since_days?: number) =>
     request<AnalyticsOverview>(`/analytics/overview${since_days ? `?since_days=${since_days}` : ""}`),
 };

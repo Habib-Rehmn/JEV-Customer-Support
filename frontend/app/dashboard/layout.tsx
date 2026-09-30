@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { href: "/dashboard", label: "Overview", adminOnly: false },
   { href: "/dashboard/tickets", label: "Tickets", adminOnly: false },
+  { href: "/dashboard/rules", label: "Rules", adminOnly: true },
   { href: "/dashboard/users", label: "Users", adminOnly: true },
 ];
 
