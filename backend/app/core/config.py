@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     openai_timeout_seconds: float = 60.0
 
     jwt_secret: str = "change-me"
+    access_token_minutes: int = 8 * 60
 
     # Business rules (see services/rules_service.py)
     rule_min_confidence: float = 0.70

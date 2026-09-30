@@ -13,6 +13,17 @@ curl localhost:8000/health
 
 API docs: http://localhost:8000/docs
 
+## Users
+
+Customers submit tickets without an account (`POST /api/v1/tickets`). Everything else needs a support user:
+
+```bash
+docker compose exec backend python -m scripts.create_user --name "Admin" --email admin@example.com --role ADMIN
+```
+
+Log in with `POST /api/v1/auth/login` and send the token as `Authorization: Bearer <token>`.
+Admins can add agents with `POST /api/v1/users`.
+
 ## Tests
 
 ```bash

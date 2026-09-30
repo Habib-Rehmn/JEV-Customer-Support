@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.api.deps import SessionDep
+from app.api.deps import SessionDep, get_current_user
 from app.repositories.customers import CustomerRepository
 from app.repositories.orders import OrderRepository
 from app.repositories.tickets import TicketRepository
@@ -8,7 +8,7 @@ from app.schemas.customer import CustomerRead
 from app.schemas.order import OrderRead
 from app.schemas.ticket import TicketList
 
-router = APIRouter(prefix="/customers", tags=["customers"])
+router = APIRouter(prefix="/customers", tags=["customers"], dependencies=[Depends(get_current_user)])
 
 
 async def _get_customer_or_404(session: SessionDep, customer_id: int):

@@ -2,17 +2,19 @@ import json
 from decimal import Decimal
 from pathlib import Path
 
+import bcrypt
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 import app.models  # noqa: F401
-from app.db.base import Base, utcnow
 from app.api.deps import get_session_factory
+from app.core.security import create_access_token
+from app.db.base import Base, utcnow
 from app.db.session import get_session
 from app.main import app
-from app.models import Customer, Order
+from app.models import Customer, Order, User
 from app.services.jev_service import get_jev_service, parse_response
 from app.services.openai_service import GeneratedReply, get_openai_service
 
@@ -95,8 +97,32 @@ def fake_openai():
     return FakeOpenAI()
 
 
+PASSWORD = "correct-horse"
+# Hashed once with a low cost factor so tests stay fast; production uses bcrypt's default.
+PASSWORD_HASH = bcrypt.hashpw(PASSWORD.encode(), bcrypt.gensalt(rounds=4)).decode()
+
+
 @pytest.fixture
-async def client(session_factory, fake_jev, fake_openai):
+async def users(session_factory):
+    async with session_factory() as session:
+        agent = User(name="Agent Amy", email="agent@example.com", password_hash=PASSWORD_HASH, role="AGENT")
+        admin = User(name="Admin Ann", email="admin@example.com", password_hash=PASSWORD_HASH, role="ADMIN")
+        session.add_all([agent, admin])
+        await session.commit()
+        return {"agent": agent.id, "admin": admin.id}
+
+
+def auth_headers(user_id: int, role: str) -> dict:
+    return {"Authorization": f"Bearer {create_access_token(user_id, role)}"}
+
+
+@pytest.fixture
+def admin_headers(users):
+    return auth_headers(users["admin"], "ADMIN")
+
+
+@pytest.fixture
+async def anon_client(session_factory, fake_jev, fake_openai):
     async def override_session():
         async with session_factory() as session:
             yield session
@@ -108,3 +134,10 @@ async def client(session_factory, fake_jev, fake_openai):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def client(anon_client, users):
+    """Logged in as an agent."""
+    anon_client.headers.update(auth_headers(users["agent"], "AGENT"))
+    return anon_client

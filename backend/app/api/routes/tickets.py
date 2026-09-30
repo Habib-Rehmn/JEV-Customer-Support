@@ -1,6 +1,14 @@
-from fastapi import APIRouter, BackgroundTasks, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
 
-from app.api.deps import JevServiceDep, OpenAIServiceDep, SessionFactoryDep, TicketServiceDep
+from app.api.deps import (
+    AdminUser,
+    CurrentUser,
+    JevServiceDep,
+    OpenAIServiceDep,
+    SessionFactoryDep,
+    TicketServiceDep,
+    get_current_user,
+)
 from app.models.enums import TicketStatus
 from app.schemas.response import AIResponseRead
 from app.schemas.ticket import (
@@ -16,10 +24,12 @@ from app.schemas.ticket import (
 )
 from app.services.ticket_service import analyze_ticket_job
 
-router = APIRouter(prefix="/tickets", tags=["tickets"])
+# Customers submit tickets without logging in; everything else is for support agents.
+public_router = APIRouter(prefix="/tickets", tags=["tickets"])
+router = APIRouter(prefix="/tickets", tags=["tickets"], dependencies=[Depends(get_current_user)])
 
 
-@router.post("", response_model=TicketRead, status_code=status.HTTP_201_CREATED)
+@public_router.post("", response_model=TicketRead, status_code=status.HTTP_201_CREATED)
 async def create_ticket(
     data: TicketCreate,
     service: TicketServiceDep,
@@ -51,7 +61,8 @@ async def get_ticket(ticket_id: int, service: TicketServiceDep):
 
 
 @router.patch("/{ticket_id}", response_model=TicketRead)
-async def update_ticket(ticket_id: int, data: TicketUpdate, service: TicketServiceDep):
+async def update_ticket(ticket_id: int, data: TicketUpdate, service: TicketServiceDep, _: AdminUser):
+    """Raw field changes, for admins correcting data. Agents use the action endpoints."""
     return await service.update(ticket_id, data)
 
 
@@ -80,17 +91,17 @@ async def edit_response(ticket_id: int, data: ResponseEdit, service: TicketServi
 
 
 @router.post("/{ticket_id}/approve", response_model=TicketRead)
-async def approve_ticket(ticket_id: int, data: ApproveRequest, service: TicketServiceDep):
+async def approve_ticket(ticket_id: int, data: ApproveRequest, service: TicketServiceDep, user: CurrentUser):
     return await service.approve(
-        ticket_id, final_text=data.final_text, action=data.action, next_status=data.next_status
+        ticket_id, final_text=data.final_text, action=data.action, next_status=data.next_status, user_id=user.id
     )
 
 
 @router.post("/{ticket_id}/escalate", response_model=TicketRead)
-async def escalate_ticket(ticket_id: int, data: EscalateRequest, service: TicketServiceDep):
-    return await service.escalate(ticket_id, data.reason)
+async def escalate_ticket(ticket_id: int, data: EscalateRequest, service: TicketServiceDep, user: CurrentUser):
+    return await service.escalate(ticket_id, data.reason, user_id=user.id)
 
 
 @router.post("/{ticket_id}/resolve", response_model=TicketRead)
-async def resolve_ticket(ticket_id: int, data: ResolveRequest, service: TicketServiceDep):
-    return await service.resolve(ticket_id, data.final_action, data.note)
+async def resolve_ticket(ticket_id: int, data: ResolveRequest, service: TicketServiceDep, user: CurrentUser):
+    return await service.resolve(ticket_id, data.final_action, data.note, user_id=user.id)

@@ -77,7 +77,7 @@ async def test_unknown_order_is_reported_in_context(client, seeded, fake_jev):
 
 async def test_context_counts_previous_refunds(client, seeded, fake_jev):
     first = (await client.post("/api/v1/tickets", json=TICKET)).json()["id"]
-    await client.patch(f"/api/v1/tickets/{first}", json={"status": "RESOLVED", "final_action": "refund"})
+    await client.post(f"/api/v1/tickets/{first}/resolve", json={"final_action": "refund"})
     await client.post("/api/v1/tickets", json=TICKET)
 
     customer = fake_jev.contexts[1]["customer"]
@@ -115,7 +115,7 @@ async def test_failed_ticket_can_be_reanalyzed(client, seeded, fake_jev):
 
 async def test_resolved_ticket_cannot_be_analyzed(client, seeded):
     ticket_id = (await client.post("/api/v1/tickets", json=TICKET)).json()["id"]
-    await client.patch(f"/api/v1/tickets/{ticket_id}", json={"status": "RESOLVED"})
+    await client.post(f"/api/v1/tickets/{ticket_id}/resolve", json={"final_action": "replacement"})
     assert (await client.post(f"/api/v1/tickets/{ticket_id}/analyze")).status_code == 409
 
 

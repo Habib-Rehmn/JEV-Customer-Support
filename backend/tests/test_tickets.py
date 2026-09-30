@@ -49,7 +49,7 @@ async def test_get_missing_ticket_returns_404(client):
 async def test_list_tickets_filters_by_status(client, seeded):
     first = (await client.post("/api/v1/tickets", json=TICKET)).json()["id"]
     await client.post("/api/v1/tickets", json=TICKET)
-    await client.patch(f"/api/v1/tickets/{first}", json={"status": "ESCALATED"})
+    await client.post(f"/api/v1/tickets/{first}/escalate", json={})
 
     all_tickets = (await client.get("/api/v1/tickets")).json()
     escalated = (await client.get("/api/v1/tickets", params={"status": "ESCALATED"})).json()
@@ -58,17 +58,18 @@ async def test_list_tickets_filters_by_status(client, seeded):
     assert escalated["items"][0]["id"] == first
 
 
-async def test_resolving_ticket_sets_resolved_at(client, seeded):
+async def test_admin_patch_resolving_ticket_sets_resolved_at(client, seeded, admin_headers):
     ticket_id = (await client.post("/api/v1/tickets", json=TICKET)).json()["id"]
     res = await client.patch(
-        f"/api/v1/tickets/{ticket_id}", json={"status": "RESOLVED", "final_action": "replacement"}
+        f"/api/v1/tickets/{ticket_id}", json={"status": "RESOLVED", "final_action": "replacement"},
+        headers=admin_headers,
     )
     assert res.status_code == 200
     assert res.json()["resolved_at"] is not None
     assert res.json()["final_action"] == "replacement"
 
 
-async def test_update_rejects_unknown_status(client, seeded):
+async def test_update_rejects_unknown_status(client, seeded, admin_headers):
     ticket_id = (await client.post("/api/v1/tickets", json=TICKET)).json()["id"]
-    res = await client.patch(f"/api/v1/tickets/{ticket_id}", json={"status": "DONE"})
+    res = await client.patch(f"/api/v1/tickets/{ticket_id}", json={"status": "DONE"}, headers=admin_headers)
     assert res.status_code == 422

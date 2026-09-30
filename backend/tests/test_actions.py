@@ -11,7 +11,7 @@ async def create(client):
 
 # Approve
 
-async def test_approve_sends_reply_and_resolves_with_permitted_action(client, seeded, session_factory):
+async def test_approve_sends_reply_and_resolves_with_permitted_action(client, seeded, users, session_factory):
     ticket_id, _ = await create(client)
 
     res = await client.post(f"/api/v1/tickets/{ticket_id}/approve", json={})
@@ -22,6 +22,7 @@ async def test_approve_sends_reply_and_resolves_with_permitted_action(client, se
 
     reply = (await client.get(f"/api/v1/tickets/{ticket_id}")).json()["latest_ai_response"]
     assert reply["approved"] is True
+    assert reply["approved_by"] == users["agent"]
     assert reply["sent_at"] is not None
     assert (await events(session_factory, ticket_id))[-2:] == ["ticket_approved", "ticket_resolved"]
 
